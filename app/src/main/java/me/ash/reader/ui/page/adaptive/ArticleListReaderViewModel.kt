@@ -265,13 +265,20 @@ constructor(
     private val _readerState: MutableStateFlow<ReaderState> = MutableStateFlow(ReaderState())
     val readerStateStateFlow = _readerState.asStateFlow()
 
+    private val _prefetchedReaderStates = MutableStateFlow<Map<String, ReaderState>>(emptyMap())
+    val prefetchedReaderStates = _prefetchedReaderStates.asStateFlow()
+
     private val currentArticle: Article?
         get() = readingUiState.value.articleWithFeed?.article
 
     private val currentFeed: Feed?
         get() = readingUiState.value.articleWithFeed?.feed
 
-    fun initData(articleId: String, listIndex: Int? = null) {
+    fun initData(
+        articleId: String,
+        listIndex: Int? = null,
+        articleIds: List<String> = emptyList(),
+    ) {
         viewModelScope.launch {
             val snapshotList = articleListUseCase.itemSnapshotList
 
@@ -288,10 +295,13 @@ constructor(
                     } as? ArticleFlowItem.Article
                 }
 
-            val item =
+            val item = if (articleIds.isNotEmpty()) {
+                rssService.get().findArticleById(articleId)!!
+            } else {
                 itemByIndex?.articleWithFeed
                     ?: (itemFromList?.articleWithFeed
                         ?: rssService.get().findArticleById(articleId)!!)
+            }
 
             if (diffMapHolder.checkIfUnread(item)) {
                 diffMapHolder.updateDiff(item, isUnread = false)
@@ -309,16 +319,60 @@ constructor(
                             link = article.link,
                             publishedDate = article.date,
                         )
-                        .prefetchArticleId()
+                        .prefetchArticleId(articleIds)
                         .renderContent(this)
                 }
+                preloadAdjacentArticles(_readerState.value)
             }
         }
+    }
+
+    /**
+     * Warm the reader cache for the two articles next to the current one so a
+     * horizontal switch can render immediately instead of starting a fetch
+     * after the swipe has completed.
+     */
+    private fun preloadAdjacentArticles(state: ReaderState) {
+        listOfNotNull(state.previousArticle, state.nextArticle)
+            .distinctBy { it.articleId }
+            .forEach { adjacent ->
+                viewModelScope.launch(ioDispatcher) {
+                    rssService.get().findArticleById(adjacent.articleId)?.let { articleWithFeed ->
+                        val loadingState = ReaderState(
+                            articleId = articleWithFeed.article.id,
+                            feedName = articleWithFeed.feed.name,
+                            title = articleWithFeed.article.title,
+                            author = articleWithFeed.article.author,
+                            link = articleWithFeed.article.link,
+                            publishedDate = articleWithFeed.article.date,
+                            content = ReaderState.Loading,
+                        )
+                        _prefetchedReaderStates.update { it + (adjacent.articleId to loadingState) }
+
+                        val content = if (articleWithFeed.feed.isFullContent) {
+                            readerCacheHelper
+                                .readOrFetchFullContent(articleWithFeed.article)
+                                .fold(
+                                    onSuccess = { ReaderState.FullContent(it) },
+                                    onFailure = {
+                                        ReaderState.Error(it.message ?: "无法加载文章")
+                                    },
+                                )
+                        } else {
+                            ReaderState.Description(articleWithFeed.article.rawDescription)
+                        }
+                        _prefetchedReaderStates.update { states ->
+                            states + (adjacent.articleId to loadingState.copy(content = content))
+                        }
+                    }
+                }
+            }
     }
 
     fun clearReadingData() {
         _readingUiState.update { ReadingUiState() }
         _readerState.update { ReaderState() }
+        _prefetchedReaderStates.value = emptyMap()
     }
 
     suspend fun ReaderState.renderContent(articleWithFeed: ArticleWithFeed): ReaderState {
@@ -390,49 +444,72 @@ constructor(
         _readerState.update { it.copy(content = ReaderState.Loading) }
     }
 
-    fun ReaderState.prefetchArticleId(): ReaderState {
+    fun ReaderState.prefetchArticleId(articleIds: List<String> = emptyList()): ReaderState {
         val items = articleListUseCase.itemSnapshotList
         val currentId = currentArticle?.id
-        val index =
+        val articleSequence = if (articleIds.isNotEmpty()) {
+            articleIds
+        } else {
+            items.filterIsInstance<ArticleFlowItem.Article>()
+                .map { it.articleWithFeed.article.id }
+        }
+        val index = if (articleIds.isNotEmpty()) {
+            articleIds.indexOf(currentId)
+        } else {
             items.indexOfFirst { item ->
                 item is ArticleFlowItem.Article && item.articleWithFeed.article.id == currentId
             }
+        }
         var previousArticle: ReaderState.PrefetchResult? = null
         var nextArticle: ReaderState.PrefetchResult? = null
 
         if (index != -1 || currentId == null) {
-            val prevIterator = items.listIterator(index)
-            while (prevIterator.hasPrevious()) {
-                val previousIndex = prevIterator.previousIndex()
-                val prev = prevIterator.previous()
-                if (prev is ArticleFlowItem.Article) {
-                    previousArticle =
-                        ReaderState.PrefetchResult(
-                            articleId = prev.articleWithFeed.article.id,
-                            index = previousIndex,
-                        )
-                    break
+            if (articleIds.isNotEmpty()) {
+                articleIds.getOrNull(index - 1)?.let {
+                    previousArticle = ReaderState.PrefetchResult(it, index - 1)
                 }
-            }
-            val nextIterator = items.listIterator(index + 1)
-            while (nextIterator.hasNext()) {
-                val nextIndex = nextIterator.nextIndex()
-                val next = nextIterator.next()
-                if (
-                    next is ArticleFlowItem.Article && next.articleWithFeed.article.id != currentId
-                ) {
-                    nextArticle =
-                        ReaderState.PrefetchResult(
-                            articleId = next.articleWithFeed.article.id,
-                            index = nextIndex,
-                        )
-                    break
+                articleIds.getOrNull(index + 1)?.let {
+                    nextArticle = ReaderState.PrefetchResult(it, index + 1)
+                }
+            } else {
+                val prevIterator = items.listIterator(index)
+                while (prevIterator.hasPrevious()) {
+                    val previousIndex = prevIterator.previousIndex()
+                    val prev = prevIterator.previous()
+                    if (prev is ArticleFlowItem.Article) {
+                        previousArticle =
+                            ReaderState.PrefetchResult(
+                                articleId = prev.articleWithFeed.article.id,
+                                index = previousIndex,
+                            )
+                        break
+                    }
+                }
+                val nextIterator = items.listIterator(index + 1)
+                while (nextIterator.hasNext()) {
+                    val nextIndex = nextIterator.nextIndex()
+                    val next = nextIterator.next()
+                    if (
+                        next is ArticleFlowItem.Article && next.articleWithFeed.article.id != currentId
+                    ) {
+                        nextArticle =
+                            ReaderState.PrefetchResult(
+                                articleId = next.articleWithFeed.article.id,
+                                index = nextIndex,
+                            )
+                        break
+                    }
                 }
             }
         }
 
         Timber.d("$previousArticle, $nextArticle, $listIndex")
-        return copy(nextArticle = nextArticle, previousArticle = previousArticle, listIndex = index)
+        return copy(
+            nextArticle = nextArticle,
+            previousArticle = previousArticle,
+            listIndex = index,
+            articleSequence = articleSequence,
+        )
     }
 
     fun downloadImage(
@@ -463,6 +540,7 @@ data class ReaderState(
     val publishedDate: Date = Date(0L),
     val content: ContentState = Loading,
     val listIndex: Int? = null,
+    val articleSequence: List<String> = emptyList(),
     val nextArticle: PrefetchResult? = null,
     val previousArticle: PrefetchResult? = null,
 ) {

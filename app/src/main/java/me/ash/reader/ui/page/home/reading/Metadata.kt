@@ -2,6 +2,8 @@ package me.ash.reader.ui.page.home.reading
 
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -13,6 +15,7 @@ import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -50,16 +53,8 @@ fun Metadata(
         modifier =
             modifier
                 .fillMaxWidth()
-                .padding(12.dp)
+                .padding(horizontal = 4.dp, vertical = 12.dp)
     ) {
-        Text(
-            modifier = Modifier.fillMaxWidth(),
-            text = dateString,
-            color = labelColor,
-            style = MaterialTheme.typography.labelMedium.merge(fontFamily = fontFamily),
-            textAlign = titleAlign,
-        )
-        Spacer(modifier = Modifier.height(4.dp))
         Text(
             modifier = Modifier.fillMaxWidth(),
             text = if (titleUpperCase.value) titleUpperCaseString else title,
@@ -74,23 +69,26 @@ fun Metadata(
             textAlign = titleAlign,
         )
         Spacer(modifier = Modifier.height(4.dp))
-        author?.let {
-            if (it.isNotEmpty()) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            val authorOrFeedName = author?.takeIf { it.isNotEmpty() } ?: feedName
+            if (authorOrFeedName.isNotEmpty()) {
                 Text(
-                    modifier = Modifier.fillMaxWidth(),
-                    text = it,
+                    text = authorOrFeedName,
                     color = labelColor,
                     style = MaterialTheme.typography.labelMedium.merge(fontFamily = fontFamily),
                     textAlign = titleAlign,
                 )
             }
+            Text(
+                text = dateString,
+                color = labelColor,
+                style = MaterialTheme.typography.labelMedium.merge(fontFamily = fontFamily),
+                textAlign = androidx.compose.ui.text.style.TextAlign.End,
+            )
         }
-        Text(
-            modifier = Modifier.fillMaxWidth(),
-            text = feedName,
-            color = labelColor,
-            style = MaterialTheme.typography.labelMedium.merge(fontFamily = fontFamily),
-            textAlign = titleAlign,
-        )
     }
 }

@@ -31,6 +31,7 @@ import me.ash.reader.ui.page.adaptive.ArticleListReaderPage
 import me.ash.reader.ui.page.adaptive.ArticleListReaderViewModel
 import me.ash.reader.ui.page.home.feeds.FeedsPage
 import me.ash.reader.ui.page.home.feeds.subscribe.SubscribeViewModel
+import me.ash.reader.ui.page.home.pulse.PulsePage
 import me.ash.reader.ui.page.nav3.key.Route
 import me.ash.reader.ui.page.settings.SettingsPage
 import me.ash.reader.ui.page.settings.accounts.AccountDetailsPage
@@ -67,6 +68,10 @@ fun AppEntry(backStack: NavBackStack<NavKey>) {
 
     val onBack: () -> Unit = {
         if (backStack.size == 1) backStack[0] = Route.Feeds else backStack.removeLastOrNull()
+    }
+
+    val onBackFromPulseReading: () -> Unit = {
+        if (backStack.isNotEmpty()) backStack[backStack.lastIndex] = Route.Pulse
     }
 
     val scaffoldDirective = calculatePaneScaffoldDirective(currentWindowAdaptiveInfo())
@@ -106,7 +111,14 @@ fun AppEntry(backStack: NavBackStack<NavKey>) {
                 ) togetherWith
                     materialSharedAxisXOut(targetOffsetX = { (it * INITIAL_OFFSET_FACTOR).toInt() })
             },
-            onBack = { backStack.removeLastOrNull() },
+            onBack = {
+                val top = backStack.lastOrNull()
+                if (top is Route.Reading && top.openedFromPulse) {
+                    onBackFromPulseReading()
+                } else {
+                    onBack()
+                }
+            },
             entryProvider = { key ->
                 when (key) {
                     Route.Feeds -> {
@@ -117,6 +129,7 @@ fun AppEntry(backStack: NavBackStack<NavKey>) {
                                 animatedVisibilityScope = LocalNavAnimatedContentScope.current,
                                 navigateToSettings = { backStack.add(Route.Settings) },
                                 navigationToFlow = { backStack.add(Route.Reading(null)) },
+                                navigateToPulse = { backStack.add(Route.Pulse) },
                                 navigateToAccountList = { backStack.add(Route.Accounts) },
                                 navigateToAccountDetail = {
                                     backStack.add(Route.AccountDetails(it))
@@ -124,16 +137,37 @@ fun AppEntry(backStack: NavBackStack<NavKey>) {
                             )
                         }
                     }
+                    Route.Pulse -> {
+                        NavEntry(key) {
+                            PulsePage(
+                                navigateToFeeds = { backStack.add(Route.Feeds) },
+                                navigateToReading = { articleId, articleIds, articleIndex ->
+                                    backStack.add(
+                                        Route.Reading(
+                                            articleId = articleId,
+                                            openedFromPulse = true,
+                                            articleIds = articleIds,
+                                            articleIndex = articleIndex,
+                                        )
+                                    )
+                                },
+                            )
+                        }
+                    }
                     is Route.Reading -> {
                         NavEntry(key) {
-                            val key = rememberSaveable(saver = Route.Reading.Saver) { key }
+                            val readingKey = rememberSaveable(saver = Route.Reading.Saver) { key }
 
-                            LaunchedEffect(key) {
-                                if (key.articleId != null) {
+                            LaunchedEffect(readingKey) {
+                                if (readingKey.articleId != null) {
                                     delay(50L)
                                     navigator.navigateTo(
                                         ListDetailPaneScaffoldRole.Detail,
-                                        ArticleData(key.articleId),
+                                        ArticleData(
+                                            articleId = readingKey.articleId,
+                                            listIndex = readingKey.articleIndex,
+                                            articleIds = readingKey.articleIds,
+                                        ),
                                     )
                                 }
                             }
@@ -146,7 +180,12 @@ fun AppEntry(backStack: NavBackStack<NavKey>) {
                                 sharedTransitionScope = this@SharedTransitionLayout,
                                 animatedVisibilityScope = LocalNavAnimatedContentScope.current,
                                 viewModel = viewModel,
-                                onBack = onBack,
+                                onBack = if (readingKey.openedFromPulse) {
+                                    onBackFromPulseReading
+                                } else {
+                                    onBack
+                                },
+                                forceCloseOnBack = readingKey.openedFromPulse,
                                 onNavigateToStylePage = { backStack.add(Route.ReadingPageStyle) },
                             )
                         }

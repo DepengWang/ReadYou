@@ -35,6 +35,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
@@ -50,6 +51,8 @@ import me.ash.reader.ui.component.base.FeedbackIconButton
 import me.ash.reader.ui.page.adaptive.NavigationAction
 
 private val sizeSpec = spring<IntSize>(stiffness = 700f)
+private val readerCanvasColor = Color(0xFF202426)
+private val readerScrolledBarColor = Color(0xFF2C3032)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -70,14 +73,15 @@ fun TopBar(
 
     val containerColor by
         animateColorAsState(
-            with(MaterialTheme.colorScheme) {
-                if (isOutlined || !isScrolled) surface else surfaceContainer
-            },
+            if (isOutlined || !isScrolled) readerCanvasColor else readerScrolledBarColor,
             label = "",
             animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
         )
 
-    Box(modifier = Modifier.fillMaxSize().zIndex(1f), contentAlignment = Alignment.TopCenter) {
+    Box(
+        modifier = Modifier.fillMaxSize().zIndex(1f).alpha(0.75f),
+        contentAlignment = Alignment.TopCenter,
+    ) {
         Column(modifier = Modifier.drawBehind { drawRect(containerColor) }) {
             Spacer(
                 modifier =
@@ -92,13 +96,13 @@ fun TopBar(
                 TopAppBar(
                     title = {},
                     modifier =
-                        if (onClick == null) Modifier
+                        (if (onClick == null) Modifier
                         else
                             Modifier.clickable(
                                 onClick = onClick,
                                 indication = null,
                                 interactionSource = remember { MutableInteractionSource() },
-                            ),
+                            )).height(32.dp),
                     windowInsets = WindowInsets(0.dp),
                     navigationIcon = {
                         val imageVector =

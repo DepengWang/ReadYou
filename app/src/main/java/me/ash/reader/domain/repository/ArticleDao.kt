@@ -890,6 +890,27 @@ interface ArticleDao {
     )
     fun queryLatestUnreadArticleFlow(accountId: Int, limit: Int): Flow<List<ArticleWithFeed>>
 
+    /**
+     * Provides a small, live article window for feed-oriented surfaces such as the Pulse home.
+     * This is a read-only projection of the existing article table; it does not introduce a
+     * second article store or status model.
+     */
+    @Transaction
+    @Query(
+        """
+        SELECT * FROM article
+        WHERE feedId = :feedId
+        AND accountId = :accountId
+        ORDER BY date DESC
+        LIMIT :limit
+        """
+    )
+    fun queryLatestArticlesFromFeed(
+        feedId: String,
+        accountId: Int,
+        limit: Int = 10,
+    ): Flow<List<ArticleWithFeed>>
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insert(vararg article: Article)
 

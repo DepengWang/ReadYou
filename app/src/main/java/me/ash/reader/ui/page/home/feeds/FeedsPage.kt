@@ -22,6 +22,7 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.ModalBottomSheetValue
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Image
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.UnfoldLess
@@ -98,6 +99,7 @@ fun FeedsPage(
     subscribeViewModel: SubscribeViewModel = hiltViewModel(),
     navigateToSettings: () -> Unit,
     navigationToFlow: () -> Unit,
+    navigateToPulse: () -> Unit,
     navigateToAccountList: () -> Unit,
     navigateToAccountDetail: (Int) -> Unit,
 ) {
@@ -208,6 +210,12 @@ fun FeedsPage(
                     }
                 },
                 actions = {
+                    FeedbackIconButton(
+                        imageVector = Icons.Outlined.Image,
+                        contentDescription = "Pulse 首页",
+                        tint = MaterialTheme.colorScheme.onSurface,
+                        onClick = navigateToPulse,
+                    )
                     if (subscribeViewModel.rssService.get().addSubscription) {
                         FeedbackIconButton(
                             imageVector = Icons.Rounded.Add,

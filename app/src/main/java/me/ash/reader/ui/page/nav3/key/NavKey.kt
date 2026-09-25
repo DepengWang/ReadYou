@@ -3,6 +3,7 @@ package me.ash.reader.ui.page.nav3.key
 import androidx.compose.runtime.saveable.Saver
 import androidx.navigation3.runtime.NavKey
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.Json
 
 @Serializable
 sealed interface Route : NavKey {
@@ -12,12 +13,22 @@ sealed interface Route : NavKey {
     // Home
     @Serializable data object Feeds : Route
 
+    @Serializable data object Pulse : Route
+
     //    @Serializable data object Flow : Route
 
     @Serializable
-    data class Reading(val articleId: String?) : Route {
+    data class Reading(
+        val articleId: String?,
+        val openedFromPulse: Boolean = false,
+        val articleIds: List<String> = emptyList(),
+        val articleIndex: Int? = null,
+    ) : Route {
         companion object {
-            val Saver = Saver<Reading, String>(save = { it.articleId }, restore = { Reading(it) })
+            val Saver = Saver<Reading, String>(
+                save = { Json.encodeToString(Reading.serializer(), it) },
+                restore = { Json.decodeFromString(Reading.serializer(), it) },
+            )
         }
     }
 

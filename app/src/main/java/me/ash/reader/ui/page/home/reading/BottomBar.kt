@@ -20,7 +20,9 @@ import androidx.compose.material.icons.automirrored.rounded.Article
 import androidx.compose.material.icons.filled.FiberManualRecord
 import androidx.compose.material.icons.outlined.FiberManualRecord
 import androidx.compose.material.icons.outlined.Headphones
-import androidx.compose.material.icons.rounded.ExpandMore
+import androidx.compose.material.icons.outlined.Palette
+import androidx.compose.material.icons.outlined.Share
+import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Star
 import androidx.compose.material.icons.rounded.StarOutline
 import androidx.compose.material3.HorizontalDivider
@@ -29,6 +31,8 @@ import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.IntSize
@@ -43,19 +47,21 @@ import me.ash.reader.ui.component.base.CanBeDisabledIconButton
 import me.ash.reader.ui.component.webview.BoldCharactersIcon
 
 private val sizeSpec = spring<IntSize>(stiffness = 700f)
+private val readerCanvasColor = Color(0xFF202426)
 
 @Composable
 fun BottomBar(
     isShow: Boolean,
     isUnread: Boolean,
     isStarred: Boolean,
-    isNextArticleAvailable: Boolean,
     isFullContent: Boolean,
     isBoldCharacters: Boolean,
     ttsButton: @Composable () -> Unit,
     onUnread: (isUnread: Boolean) -> Unit = {},
     onStarred: (isStarred: Boolean) -> Unit = {},
-    onNextArticle: () -> Unit = {},
+    onClose: () -> Unit = {},
+    onNavigateToStylePage: () -> Unit = {},
+    onShare: () -> Unit = {},
     onFullContent: (isFullContent: Boolean) -> Unit = {},
     onBoldCharacters: () -> Unit = {},
     onReadAloud: () -> Unit = {},
@@ -67,7 +73,8 @@ fun BottomBar(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .zIndex(1f),
+            .zIndex(1f)
+            .alpha(0.75f),
         contentAlignment = Alignment.BottomCenter
     ) {
         AnimatedVisibility(
@@ -84,14 +91,14 @@ fun BottomBar(
                     )
                 }
                 Surface(
-                    color = MaterialTheme.colorScheme.run { if (isOutlined) surface else surfaceContainer }
+                    color = readerCanvasColor
                 ) {
                     // TODO: Component styles await refactoring
                     Row(
                         modifier = Modifier
                             .navigationBarsPadding()
                             .fillMaxWidth()
-                            .height(60.dp),
+                            .height(45.dp),
                         horizontalArrangement = Arrangement.SpaceAround,
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
@@ -132,14 +139,34 @@ fun BottomBar(
                             onStarred(!isStarred)
                         }
                         CanBeDisabledIconButton(
-                            disabled = !isNextArticleAvailable,
+                            disabled = false,
                             modifier = Modifier.size(40.dp),
-                            imageVector = Icons.Rounded.ExpandMore,
-                            contentDescription = "Next Article",
+                            imageVector = Icons.Outlined.Palette,
+                            contentDescription = stringResource(R.string.style),
                             tint = MaterialTheme.colorScheme.outline,
                         ) {
                             view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
-                            onNextArticle()
+                            onNavigateToStylePage()
+                        }
+                        CanBeDisabledIconButton(
+                            disabled = false,
+                            modifier = Modifier.size(40.dp),
+                            imageVector = Icons.Rounded.Close,
+                            contentDescription = stringResource(R.string.close),
+                            tint = MaterialTheme.colorScheme.outline,
+                        ) {
+                            view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
+                            onClose()
+                        }
+                        CanBeDisabledIconButton(
+                            disabled = false,
+                            modifier = Modifier.size(40.dp),
+                            imageVector = Icons.Outlined.Share,
+                            contentDescription = stringResource(R.string.share),
+                            tint = MaterialTheme.colorScheme.outline,
+                        ) {
+                            view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
+                            onShare()
                         }
                         ttsButton()
                         CanBeDisabledIconButton(

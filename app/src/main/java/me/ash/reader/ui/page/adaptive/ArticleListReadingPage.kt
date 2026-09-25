@@ -45,7 +45,12 @@ import me.ash.reader.ui.page.home.flow.FlowPage
 import me.ash.reader.ui.page.home.reading.ReadingPage
 import timber.log.Timber
 
-@Parcelize data class ArticleData(val articleId: String, val listIndex: Int? = null) : Parcelable
+@Parcelize
+data class ArticleData(
+    val articleId: String,
+    val listIndex: Int? = null,
+    val articleIds: List<String> = emptyList(),
+) : Parcelable
 
 @OptIn(ExperimentalMaterial3AdaptiveApi::class, ExperimentalSharedTransitionApi::class)
 @Composable
@@ -57,10 +62,15 @@ fun ArticleListReaderPage(
     animatedVisibilityScope: AnimatedVisibilityScope,
     viewModel: ArticleListReaderViewModel,
     onBack: () -> Unit,
+    forceCloseOnBack: Boolean = false,
     onNavigateToStylePage: () -> Unit,
 ) {
 
     val scope = rememberCoroutineScope()
+
+    BackHandler(enabled = forceCloseOnBack) {
+        onBack()
+    }
 
     val backBehavior = BackNavigationBehavior.PopUntilScaffoldValueChange
 
@@ -149,7 +159,10 @@ fun ArticleListReaderPage(
                                 scope.launch {
                                     navigator.navigateTo(
                                         pane = ListDetailPaneScaffoldRole.Detail,
-                                        contentKey = ArticleData(articleId = id, listIndex = index),
+                                        contentKey = ArticleData(
+                                            articleId = id,
+                                            listIndex = index,
+                                        ),
                                     )
                                 }
                             },
@@ -172,11 +185,16 @@ fun ArticleListReaderPage(
                         viewModel.initData(
                             articleId = contentKey.articleId,
                             listIndex = contentKey.listIndex,
+                            articleIds = contentKey.articleIds,
                         )
                     }
                 }
 
                 CompositionLocalProvider(LocalTextContentWidth provides animatedContentWidth) {
+                    BackHandler(enabled = forceCloseOnBack) {
+                        onBack()
+                    }
+
                     ReadingPage(
                         viewModel = viewModel,
                         navigationAction = navigationAction,
@@ -184,14 +202,20 @@ fun ArticleListReaderPage(
                             scope.launch {
                                 navigator.navigateTo(
                                     pane = ListDetailPaneScaffoldRole.Detail,
-                                    contentKey = ArticleData(articleId = id, listIndex = index),
+                                    contentKey = ArticleData(
+                                        articleId = id,
+                                        listIndex = index,
+                                        articleIds = contentKey?.articleIds.orEmpty(),
+                                    ),
                                 )
                             }
                         },
                         onNavAction = {
                             when (it) {
                                 NavigationAction.Close -> {
-                                    if (navigator.canNavigateBack(backBehavior)) {
+                                    if (forceCloseOnBack) {
+                                        onBack()
+                                    } else if (navigator.canNavigateBack(backBehavior)) {
                                         scope
                                             .launch { navigator.navigateBack(backBehavior) }
                                             .invokeOnCompletion { viewModel.clearReadingData() }
