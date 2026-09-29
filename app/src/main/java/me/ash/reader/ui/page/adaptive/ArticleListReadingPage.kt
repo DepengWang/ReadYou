@@ -248,9 +248,6 @@ fun ArticleListReaderPage(
                                 }
                             },
                             onNavigateToStylePage = onNavigateToStylePage,
-                            sharedTransitionScope = sharedTransitionScope,
-                            animatedVisibilityScope = animatedVisibilityScope,
-                            sharedElementEnabled = sharedElementEnabled,
                         )
                     } else {
                         Box(modifier = Modifier.fillMaxSize())

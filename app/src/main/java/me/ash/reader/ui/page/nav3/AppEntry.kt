@@ -141,8 +141,6 @@ fun AppEntry(backStack: NavBackStack<NavKey>) {
                     Route.Pulse -> {
                         NavEntry(key) {
                             PulsePage(
-                                sharedTransitionScope = this@SharedTransitionLayout,
-                                animatedVisibilityScope = LocalNavAnimatedContentScope.current,
                                 navigateToFeeds = { backStack.add(Route.Feeds) },
                                 navigateToReading = { articleId, articleIds, articleIndex ->
                                     backStack.add(
@@ -182,7 +180,6 @@ fun AppEntry(backStack: NavBackStack<NavKey>) {
                                 sharedTransitionScope = this@SharedTransitionLayout,
                                 animatedVisibilityScope = LocalNavAnimatedContentScope.current,
                                 initialArticleId = readingKey.articleId,
-                                sharedElementEnabled = readingKey.openedFromPulse,
                                 viewModel = viewModel,
                                 onBack = if (readingKey.openedFromPulse) {
                                     onBackFromPulseReading

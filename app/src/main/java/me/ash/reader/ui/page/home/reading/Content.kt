@@ -17,9 +17,6 @@ import androidx.compose.foundation.text.selection.DisableSelection
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.animation.AnimatedVisibilityScope
-import androidx.compose.animation.ExperimentalSharedTransitionApi
-import androidx.compose.animation.SharedTransitionScope
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.LoadingIndicator
 import androidx.compose.runtime.Composable
@@ -45,7 +42,7 @@ import me.ash.reader.ui.component.webview.RYWebView
 import me.ash.reader.ui.ext.extractDomain
 import me.ash.reader.ui.ext.roundClick
 
-@OptIn(ExperimentalMaterial3ExpressiveApi::class, ExperimentalSharedTransitionApi::class)
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun Content(
     modifier: Modifier = Modifier,
@@ -60,10 +57,6 @@ fun Content(
     isLoading: Boolean,
     contentPadding: PaddingValues = PaddingValues(),
     onImageClick: ((imgUrl: String, altText: String) -> Unit)? = null,
-    articleId: String? = null,
-    sharedTransitionScope: SharedTransitionScope,
-    animatedVisibilityScope: AnimatedVisibilityScope,
-    sharedElementEnabled: Boolean = false,
 ) {
     val context = LocalContext.current
     val subheadUpperCase = LocalReadingSubheadUpperCase.current
@@ -77,29 +70,17 @@ fun Content(
     }
     val uriHandler = LocalUriHandler.current
 
-    val headlineModifier = with(sharedTransitionScope) {
-        if (sharedElementEnabled && articleId != null) {
-            Modifier.sharedElement(
-                sharedContentState = rememberSharedContentState("pulse-article-$articleId"),
-                animatedVisibilityScope = animatedVisibilityScope,
-            )
-        } else {
-            Modifier
-        }
-    }
     val headline =
         @Composable {
-            Box(modifier = headlineModifier.fillMaxWidth()) {
-                Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp)) {
-                    DisableSelection {
-                        Metadata(
-                            feedName = feedName,
-                            title = title,
-                            author = author,
-                            publishedDate = publishedDate,
-                            modifier = Modifier.roundClick { link?.let { uriHandler.openUri(it) } },
-                        )
-                    }
+            Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp)) {
+                DisableSelection {
+                    Metadata(
+                        feedName = feedName,
+                        title = title,
+                        author = author,
+                        publishedDate = publishedDate,
+                        modifier = Modifier.roundClick { link?.let { uriHandler.openUri(it) } },
+                    )
                 }
             }
         }
