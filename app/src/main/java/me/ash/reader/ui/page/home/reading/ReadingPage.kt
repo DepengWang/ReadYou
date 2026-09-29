@@ -1,6 +1,9 @@
 package me.ash.reader.ui.page.home.reading
 
 import androidx.compose.animation.togetherWith
+import androidx.compose.animation.AnimatedVisibilityScope
+import androidx.compose.animation.ExperimentalSharedTransitionApi
+import androidx.compose.animation.SharedTransitionScope
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -58,7 +61,11 @@ import me.ash.reader.ui.page.adaptive.NavigationAction
 import me.ash.reader.ui.page.adaptive.ReaderState
 import me.ash.reader.ui.page.home.reading.tts.TtsButton
 
-@OptIn(ExperimentalFoundationApi::class, ExperimentalMaterialApi::class)
+@OptIn(
+    ExperimentalFoundationApi::class,
+    ExperimentalMaterialApi::class,
+    ExperimentalSharedTransitionApi::class,
+)
 @Composable
 fun ReadingPage(
     //    navController: NavHostController,
@@ -67,6 +74,8 @@ fun ReadingPage(
     onLoadArticle: (String, Int) -> Unit,
     onNavAction: (NavigationAction) -> Unit,
     onNavigateToStylePage: () -> Unit,
+    sharedTransitionScope: SharedTransitionScope,
+    animatedVisibilityScope: AnimatedVisibilityScope,
 ) {
     val readerCanvasColor = Color(0xFF2B2B2B)
     val readerPageColor = Color(0xFF2B2B2B)
@@ -194,11 +203,19 @@ fun ReadingPage(
                                         ),
                                 ) {
                                     Box(
-                                        modifier = Modifier
-                                            .fillMaxSize()
-                                            .background(readerPageColor, readerPageShape)
-                                            .clip(readerPageShape)
-                                            .clipToBounds(),
+                                        modifier = with(sharedTransitionScope) {
+                                            Modifier
+                                                .fillMaxSize()
+                                                .background(readerPageColor, readerPageShape)
+                                                .clip(readerPageShape)
+                                                .clipToBounds()
+                                                .sharedElement(
+                                                    sharedContentState = rememberSharedContentState(
+                                                        "pulse-article-${pageState.articleId}",
+                                                    ),
+                                                    animatedVisibilityScope = animatedVisibilityScope,
+                                                )
+                                        },
                                     ) {
                                         Content(
                                             modifier = Modifier

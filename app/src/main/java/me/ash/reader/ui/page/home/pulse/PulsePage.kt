@@ -1,6 +1,9 @@
 package me.ash.reader.ui.page.home.pulse
 
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.AnimatedVisibilityScope
+import androidx.compose.animation.ExperimentalSharedTransitionApi
+import androidx.compose.animation.SharedTransitionScope
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
@@ -106,9 +109,11 @@ private val PulseFeedRowHeight = 147.dp
 private val PulseArticleCardSize = 112.dp
 private val PulseRefreshDragThreshold = PulseArticleCardSize
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalSharedTransitionApi::class)
 @Composable
 fun PulsePage(
+    sharedTransitionScope: SharedTransitionScope,
+    animatedVisibilityScope: AnimatedVisibilityScope,
     navigateToFeeds: () -> Unit,
     navigateToReading: (String, List<String>, Int) -> Unit,
     viewModel: PulseViewModel = hiltViewModel(),
@@ -341,6 +346,8 @@ fun PulsePage(
                             PulseFeedRow(
                                 feed = item.feed,
                                 isRefreshing = refreshingFeedIds.contains(item.feed.feed.id),
+                                sharedTransitionScope = sharedTransitionScope,
+                                animatedVisibilityScope = animatedVisibilityScope,
                                 onRefresh = { viewModel.refreshFeed(item.feed.feed) },
                                 onArticleClick = { article ->
                                     viewModel.markAsRead(article)
@@ -376,6 +383,8 @@ private sealed interface PulseListItem {
 private fun PulseFeedRow(
     feed: PulseFeed,
     isRefreshing: Boolean,
+    sharedTransitionScope: SharedTransitionScope,
+    animatedVisibilityScope: AnimatedVisibilityScope,
     onRefresh: () -> Unit,
     onArticleClick: (ArticleWithFeed) -> Unit,
     onToggleStarred: (ArticleWithFeed) -> Unit,
@@ -584,6 +593,8 @@ private fun PulseFeedRow(
                                 article = article,
                                 size = PulseArticleCardSize,
                                 thumbnailPath = feed.thumbnailPaths[article.article.id],
+                                sharedTransitionScope = sharedTransitionScope,
+                                animatedVisibilityScope = animatedVisibilityScope,
                                 onClick = { onArticleClick(article) },
                                 onToggleStarred = { onToggleStarred(article) },
                             )
@@ -616,6 +627,8 @@ private fun PulseArticleCard(
     article: ArticleWithFeed,
     size: Dp,
     thumbnailPath: String?,
+    sharedTransitionScope: SharedTransitionScope,
+    animatedVisibilityScope: AnimatedVisibilityScope,
     onClick: () -> Unit,
     onToggleStarred: () -> Unit,
 ) {
@@ -623,10 +636,18 @@ private fun PulseArticleCard(
     val articleImageAlpha = if (article.article.isUnread) 1f else 0.74f
     val requestedImageSize = with(LocalDensity.current) { size.toPx().toInt().coerceAtLeast(1) }
     Card(
-        modifier = Modifier
-            .width(size)
-            .height(size)
-            .clickable(onClick = onClick),
+        modifier = with(sharedTransitionScope) {
+            Modifier
+                .width(size)
+                .height(size)
+                .sharedElement(
+                    sharedContentState = rememberSharedContentState(
+                        "pulse-article-${article.article.id}",
+                    ),
+                    animatedVisibilityScope = animatedVisibilityScope,
+                )
+                .clickable(onClick = onClick)
+        },
         shape = shape,
         colors = CardDefaults.cardColors(
             containerColor = Color.Transparent,

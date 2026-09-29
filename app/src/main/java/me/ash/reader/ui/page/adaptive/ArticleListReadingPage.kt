@@ -198,7 +198,7 @@ fun ArticleListReaderPage(
                     ReadingPage(
                         viewModel = viewModel,
                         navigationAction = navigationAction,
-                        onLoadArticle = { id, index ->
+                                onLoadArticle = { id, index ->
                             scope.launch {
                                 navigator.navigateTo(
                                     pane = ListDetailPaneScaffoldRole.Detail,
@@ -236,6 +236,8 @@ fun ArticleListReaderPage(
                             }
                         },
                         onNavigateToStylePage = onNavigateToStylePage,
+                        sharedTransitionScope = sharedTransitionScope,
+                        animatedVisibilityScope = animatedVisibilityScope,
                     )
                 }
             }

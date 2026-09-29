@@ -71,7 +71,9 @@ fun AppEntry(backStack: NavBackStack<NavKey>) {
     }
 
     val onBackFromPulseReading: () -> Unit = {
-        if (backStack.isNotEmpty()) backStack[backStack.lastIndex] = Route.Pulse
+        if (backStack.lastOrNull() is Route.Reading) {
+            backStack.removeLastOrNull()
+        }
     }
 
     val scaffoldDirective = calculatePaneScaffoldDirective(currentWindowAdaptiveInfo())
@@ -140,6 +142,8 @@ fun AppEntry(backStack: NavBackStack<NavKey>) {
                     Route.Pulse -> {
                         NavEntry(key) {
                             PulsePage(
+                                sharedTransitionScope = this@SharedTransitionLayout,
+                                animatedVisibilityScope = LocalNavAnimatedContentScope.current,
                                 navigateToFeeds = { backStack.add(Route.Feeds) },
                                 navigateToReading = { articleId, articleIds, articleIndex ->
                                     backStack.add(
