@@ -53,6 +53,8 @@
     <string name="clear_articles_group_tips">清空 \"%1$s\" 分组中所有已归档的文章</string>
     <string name="add_to_group">添加到组</string>
     <string name="move_to_group">移动到组</string>
+    <string name="move_group_up">上移</string>
+    <string name="move_group_down">下移</string>
     <string name="all_move_to_group_tips">将 \"%1$s\" 分组中的所有订阅源移动至 \"%2$s\" 分组</string>
     <string name="all_move_to_group_toast">已全部移动至 \"%1$s\" 分组</string>
     <string name="rename">重命名</string>
@@ -126,6 +128,7 @@
     <string name="basic_fonts">基本字体</string>
     <string name="feeds_page">订阅源页面</string>
     <string name="flow_page">信息流页面</string>
+    <string name="pulse_page">Pulse 页面</string>
     <string name="reading_page">阅读页面</string>
     <string name="sponsor">捐赠</string>
     <string name="open_source_licenses">开放源代码许可</string>

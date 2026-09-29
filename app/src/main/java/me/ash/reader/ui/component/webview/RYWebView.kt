@@ -37,6 +37,7 @@ import me.ash.reader.ui.theme.palette.alwaysLight
 @Composable
 fun RYWebView(
     modifier: Modifier = Modifier,
+    textMargin: Int? = null,
     content: String,
     refererDomain: String? = null,
     onImageClick: ((imgUrl: String, altText: String) -> Unit)? = null,
@@ -53,7 +54,7 @@ fun RYWebView(
     val textColor: Int = MaterialTheme.colorScheme.onSurfaceVariant.toArgb()
     val textBold: Boolean = LocalReadingTextBold.current.value
     val textAlign: String = LocalReadingTextAlign.current.toTextAlignCSS()
-    val textMargin: Int = LocalReadingTextHorizontalPadding.current
+    val resolvedTextMargin: Int = textMargin ?: LocalReadingTextHorizontalPadding.current
     val boldTextColor: Int = MaterialTheme.colorScheme.onSurface.toArgb()
     val linkTextColor: Int = MaterialTheme.colorScheme.primary.toArgb()
     val subheadBold: Boolean = LocalReadingSubheadBold.current.value
@@ -112,7 +113,7 @@ fun RYWebView(
                             fontPath = fontPath,
                             lineHeight = lineHeight,
                             letterSpacing = letterSpacing,
-                            textMargin = textMargin,
+                            textMargin = resolvedTextMargin,
                             textColor = textColor,
                             textBold = textBold,
                             textAlign = textAlign,
@@ -124,7 +125,7 @@ fun RYWebView(
                             linkTextColor = linkTextColor,
                             codeTextColor = codeTextColor,
                             codeBgColor = codeBgColor,
-                            tableMargin = textMargin,
+                            tableMargin = resolvedTextMargin,
                             selectionTextColor = selectionTextColor,
                             selectionBgColor = selectionBgColor,
                         ),

@@ -81,9 +81,20 @@ abstract class AbstractRssRepository(
     open suspend fun addGroup(destFeed: Feed?, newGroupName: String): String {
         accountService.getCurrentAccountId().let { accountId ->
             return accountId.spacerDollar(UUID.randomUUID().toString()).also {
-                groupDao.insert(Group(id = it, name = newGroupName, accountId = accountId))
+                groupDao.insert(
+                    Group(
+                        id = it,
+                        name = newGroupName,
+                        accountId = accountId,
+                        sortOrder = groupDao.nextSortOrder(accountId),
+                    )
+                )
             }
         }
+    }
+
+    open suspend fun reorderGroups(groups: List<Group>) {
+        groupDao.updateAll(groups.mapIndexed { index, group -> group.copy(sortOrder = index) })
     }
 
     abstract suspend fun sync(
@@ -178,8 +189,8 @@ abstract class AbstractRssRepository(
         accountId: Int = accountService.getCurrentAccountId(),
         feedId: String? = null,
         groupId: String? = null,
-    ) {
-        SyncWorker.enqueueOneTimeWork(
+    ): UUID {
+        return SyncWorker.enqueueOneTimeWork(
             workManager,
             workDataOf("accountId" to accountId, "feedId" to feedId, "groupId" to groupId),
         )

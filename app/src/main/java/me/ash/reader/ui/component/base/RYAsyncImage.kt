@@ -33,6 +33,7 @@ fun RYAsyncImage(
     contentDescription: String? = null,
     @DrawableRes placeholder: Int? = null,
     @DrawableRes error: Int? = null,
+    crossfade: Boolean = true,
 ) {
     val painter =
         rememberAsyncImagePainter(
@@ -48,7 +49,7 @@ fun RYAsyncImage(
                     .apply {
                         if (placeholder != null) placeholder(placeholder)
                         if (error != null) error(error)
-                        crossfade(true)
+                        crossfade(crossfade)
                         scale(scale)
                         precision(precision)
                         size(size)

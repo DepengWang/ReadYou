@@ -174,7 +174,14 @@ constructor(
                 destCategoryId = newGroupName,
             )
         val id = accountId.spacerDollar(newGroupName.ofCategoryIdToStreamId())
-        groupDao.insert(Group(id = id, name = newGroupName, accountId = accountId))
+        groupDao.insert(
+            Group(
+                id = id,
+                name = newGroupName,
+                accountId = accountId,
+                sortOrder = groupDao.nextSortOrder(accountId),
+            )
+        )
         return id
     }
 

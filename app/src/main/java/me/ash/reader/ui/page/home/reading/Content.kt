@@ -15,18 +15,25 @@ import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.text.selection.DisableSelection
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.LoadingIndicator
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.unit.dp
 import java.util.Date
+import kotlin.math.roundToInt
 import me.ash.reader.infrastructure.preference.LocalReadingRenderer
 import me.ash.reader.infrastructure.preference.LocalReadingSubheadUpperCase
+import me.ash.reader.infrastructure.preference.LocalReadingTextHorizontalPadding
 import me.ash.reader.infrastructure.preference.ReadingRendererPreference
 import me.ash.reader.ui.component.reader.Reader
 import me.ash.reader.ui.component.scrollbar.drawVerticalScrollIndicator
@@ -54,7 +61,12 @@ fun Content(
     val subheadUpperCase = LocalReadingSubheadUpperCase.current
     val renderer = LocalReadingRenderer.current
 
-    val articlePageBackgroundColor = Color(0xFF2C3032)
+    val articlePageBackgroundColor = Color(0xFF484848)
+    val contentShape = RoundedCornerShape(10.dp)
+    val textHorizontalPadding = 4.dp
+    val webViewTextMargin = with(LocalDensity.current) {
+        textHorizontalPadding.toPx().roundToInt()
+    }
     val uriHandler = LocalUriHandler.current
 
     val headline =
@@ -81,9 +93,11 @@ fun Content(
                 Column(
                         modifier =
                         modifier
-                            .background(articlePageBackgroundColor)
-                            .padding(top = contentPadding.calculateTopPadding())
                             .fillMaxSize()
+                            .shadow(5.dp, contentShape, clip = false)
+                            .background(articlePageBackgroundColor)
+                            .clip(contentShape)
+                            .padding(top = contentPadding.calculateTopPadding())
                             .drawVerticalScrollIndicator(scrollState)
                 ) {
                     Column(
@@ -95,11 +109,12 @@ fun Content(
 
                             RYWebView(
                                 modifier = Modifier.fillMaxSize(),
+                                textMargin = webViewTextMargin,
                                 content = content,
                                 refererDomain = link.extractDomain(),
                                 onImageClick = onImageClick,
                             )
-                            Spacer(modifier = Modifier.height(45.dp))
+                            Spacer(modifier = Modifier.height(40.dp))
                             Spacer(
                                 modifier = Modifier.height(contentPadding.calculateBottomPadding())
                             )
@@ -109,15 +124,20 @@ fun Content(
             }
 
             ReadingRendererPreference.NativeComponent -> {
-                SelectionContainer {
-                    LazyColumn(
+                CompositionLocalProvider(
+                    LocalReadingTextHorizontalPadding provides textHorizontalPadding.value.toInt(),
+                ) {
+                    SelectionContainer {
+                        LazyColumn(
                         modifier = modifier
                             .fillMaxSize()
+                            .shadow(5.dp, contentShape, clip = false)
                             .background(articlePageBackgroundColor)
+                            .clip(contentShape)
                             .drawVerticalScrollIndicator(listState),
                         state = listState,
                         horizontalAlignment = Alignment.CenterHorizontally,
-                    ) {
+                        ) {
                         item {
                             Spacer(modifier = Modifier.height(contentPadding.calculateTopPadding()))
                             headline()
@@ -133,10 +153,11 @@ fun Content(
                         )
 
                         item {
-                            Spacer(modifier = Modifier.height(45.dp))
+                            Spacer(modifier = Modifier.height(40.dp))
                             Spacer(
                                 modifier = Modifier.height(contentPadding.calculateBottomPadding())
                             )
+                        }
                         }
                     }
                 }

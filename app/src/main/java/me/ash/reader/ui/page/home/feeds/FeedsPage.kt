@@ -42,13 +42,16 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshots.SnapshotStateMap
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.zIndex
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
@@ -132,6 +135,16 @@ fun FeedsPage(
     val currentVersion = remember { context.getCurrentVersion() }
     val listState =
         if (groupWithFeedList.isNotEmpty()) feedsUiState.listState else rememberLazyListState()
+    var draggedGroupId by remember { mutableStateOf<String?>(null) }
+    var draggedGroupOffset by remember { mutableStateOf(0f) }
+    var draggedOrderIds by remember { mutableStateOf<List<String>?>(null) }
+    var dragTargetGroupId by remember { mutableStateOf<String?>(null) }
+    val displayedGroupWithFeedList = remember(groupWithFeedList, draggedOrderIds) {
+        draggedOrderIds?.let { orderIds ->
+            val byId = groupWithFeedList.associateBy { it.group.id }
+            orderIds.mapNotNull { byId[it] } + groupWithFeedList.filter { it.group.id !in orderIds }
+        } ?: groupWithFeedList
+    }
 
     val owner = LocalLifecycleOwner.current
 
@@ -288,8 +301,32 @@ fun FeedsPage(
                         Spacer(modifier = Modifier.height(8.dp))
                     }
 
-                    itemsIndexed(groupWithFeedList) { _, (group, feeds) ->
-                        GroupWithFeedsContainer {
+                    itemsIndexed(
+                        displayedGroupWithFeedList,
+                        key = { _, (group, _) -> "group:${group.id}" },
+                    ) { _, (group, feeds) ->
+                        val dragIndicatorColor = MaterialTheme.colorScheme.primary
+                        GroupWithFeedsContainer(
+                            modifier = Modifier
+                                .zIndex(if (draggedGroupId == group.id) 1f else 0f)
+                                .drawBehind {
+                                    if (dragTargetGroupId == group.id) {
+                                        drawRoundRect(
+                                            color = dragIndicatorColor,
+                                            topLeft = androidx.compose.ui.geometry.Offset(0f, 0f),
+                                            size = androidx.compose.ui.geometry.Size(size.width, 4.dp.toPx()),
+                                            cornerRadius = androidx.compose.ui.geometry.CornerRadius(2.dp.toPx()),
+                                        )
+                                    }
+                                }
+                                .graphicsLayer {
+                                    translationY = if (draggedGroupId == group.id) draggedGroupOffset else 0f
+                                    scaleX = if (draggedGroupId == group.id) 1.015f else 1f
+                                    scaleY = if (draggedGroupId == group.id) 1.015f else 1f
+                                    shadowElevation = if (draggedGroupId == group.id) 18.dp.toPx() else 0f
+                                    alpha = if (draggedGroupId == group.id) 0.96f else 1f
+                                },
+                        ) {
                             GroupItem(
                                 isExpanded = {
                                     groupsVisible.getOrPut(group.id, groupListExpand::value)
@@ -302,6 +339,58 @@ fun FeedsPage(
                                             .not()
                                 },
                                 onLongClick = { scope.launch { groupDrawerState.show() } },
+                                onDragStart = {
+                                    draggedGroupId = group.id
+                                    draggedGroupOffset = 0f
+                                    draggedOrderIds = displayedGroupWithFeedList.map { it.group.id }
+                                    dragTargetGroupId = null
+                                },
+                                onDragBy = { delta ->
+                                    if (draggedGroupId == group.id) {
+                                        draggedGroupOffset += delta
+                                        val currentIndex = displayedGroupWithFeedList.indexOfFirst { it.group.id == group.id }
+                                        val direction = if (draggedGroupOffset > 0f) 1 else -1
+                                        val targetIndex = currentIndex + direction
+                                        val visibleItems = listState.layoutInfo.visibleItemsInfo
+                                        val draggedInfo = visibleItems.firstOrNull { it.key == "group:${group.id}" }
+                                        val targetGroup = displayedGroupWithFeedList.getOrNull(targetIndex)
+                                        val targetInfo = targetGroup?.let { target ->
+                                            visibleItems.firstOrNull { it.key == "group:${target.group.id}" }
+                                        }
+                                        if (draggedInfo != null && targetInfo != null) {
+                                            val draggedCenter = draggedInfo.offset + draggedInfo.size / 2f + draggedGroupOffset
+                                            val targetCenter = targetInfo.offset + targetInfo.size / 2f
+                                            dragTargetGroupId = if (
+                                                (direction > 0 && draggedCenter > targetCenter - targetInfo.size * 0.35f) ||
+                                                    (direction < 0 && draggedCenter < targetCenter + targetInfo.size * 0.35f)
+                                            ) targetGroup.group.id else null
+
+                                            if ((direction > 0 && draggedCenter > targetCenter) ||
+                                                (direction < 0 && draggedCenter < targetCenter)
+                                            ) {
+                                                val reordered = displayedGroupWithFeedList.toMutableList().apply {
+                                                    add(targetIndex, removeAt(currentIndex))
+                                                }
+                                                draggedGroupOffset -= targetInfo.offset - draggedInfo.offset
+                                                draggedOrderIds = reordered.map { it.group.id }
+                                                dragTargetGroupId = null
+                                                feedsViewModel.reorderGroups(reordered.map { it.group })
+                                            }
+                                        }
+                                    }
+                                },
+                                onDragEnd = {
+                                    draggedGroupId = null
+                                    draggedGroupOffset = 0f
+                                    draggedOrderIds = null
+                                    dragTargetGroupId = null
+                                },
+                                onDragCancel = {
+                                    draggedGroupId = null
+                                    draggedGroupOffset = 0f
+                                    draggedOrderIds = null
+                                    dragTargetGroupId = null
+                                },
                             ) {
                                 feedsViewModel.changeFilter(
                                     filterState.copy(group = group, feed = null)

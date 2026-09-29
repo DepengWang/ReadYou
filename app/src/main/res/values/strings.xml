@@ -63,6 +63,8 @@
     <string name="clear_articles_group_tips">Clear all archived articles in \"%1$s\" group</string>
     <string name="add_to_group">Add to group</string>
     <string name="move_to_group">Move to group</string>
+    <string name="move_group_up">Move up</string>
+    <string name="move_group_down">Move down</string>
     <string name="all_move_to_group_tips">Move all feeds in the \"%1$s\" group to the \"%2$s\" group</string>
     <string name="all_move_to_group_toast">Moved all feeds to the \"%1$s\" group</string>
     <string name="rename">Rename</string>
@@ -152,6 +154,7 @@
     <string name="google_sans" translatable="false">Google Sans Flex</string>
     <string name="feeds_page">Feeds page</string>
     <string name="flow_page">Flow page</string>
+    <string name="pulse_page">Pulse page</string>
     <string name="reading_page">Reading page</string>
     <string name="sponsor">Sponsor</string>
     <string name="open_source_licenses">Open source licenses</string>

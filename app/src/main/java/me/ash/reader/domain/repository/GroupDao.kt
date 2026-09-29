@@ -29,6 +29,7 @@ interface GroupDao {
         """
         SELECT * FROM `group`
         WHERE accountId = :accountId
+        ORDER BY sortOrder ASC, name COLLATE NOCASE ASC, id ASC
         """
     )
     fun queryAllGroupWithFeedAsFlow(accountId: Int): Flow<MutableList<GroupWithFeed>>
@@ -38,6 +39,7 @@ interface GroupDao {
         """
         SELECT * FROM `group`
         WHERE accountId = :accountId
+        ORDER BY sortOrder ASC, name COLLATE NOCASE ASC, id ASC
         """
     )
     suspend fun queryAllGroupWithFeed(accountId: Int): List<GroupWithFeed>
@@ -46,9 +48,18 @@ interface GroupDao {
         """
         SELECT * FROM `group`
         WHERE accountId = :accountId
+        ORDER BY sortOrder ASC, name COLLATE NOCASE ASC, id ASC
         """
     )
     fun queryAllGroup(accountId: Int): Flow<MutableList<Group>>
+
+    @Query(
+        """
+        SELECT COALESCE(MAX(sortOrder), -1) + 1 FROM `group`
+        WHERE accountId = :accountId
+        """
+    )
+    suspend fun nextSortOrder(accountId: Int): Int
 
     @Query(
         """
@@ -81,7 +92,16 @@ interface GroupDao {
     @Transaction
     suspend fun insertOrUpdate(groups: List<Group>) {
         val localGroupIds = queryByIds(groups.map { it.id }).map { it.id }
-        val (newGroups, groupsToUpdate) = groups.partition { it.id !in localGroupIds }
+        val localGroups = queryAll(groups.firstOrNull()?.accountId ?: return)
+        var nextOrder = localGroups.maxOfOrNull { it.sortOrder }?.plus(1) ?: 0
+        val newGroups = groups
+            .filter { it.id !in localGroupIds }
+            .map { it.copy(sortOrder = nextOrder++) }
+        val groupsToUpdate = groups.mapNotNull { incoming ->
+            localGroups.firstOrNull { it.id == incoming.id }?.let { local ->
+                incoming.copy(sortOrder = local.sortOrder)
+            }
+        }
         insertAll(newGroups)
         updateAll(groupsToUpdate)
     }

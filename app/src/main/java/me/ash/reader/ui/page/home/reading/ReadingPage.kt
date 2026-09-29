@@ -11,6 +11,7 @@ import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.ExperimentalMaterialApi
@@ -31,10 +32,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
-import androidx.compose.ui.input.nestedscroll.NestedScrollSource
-import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.graphics.Color
@@ -70,8 +68,8 @@ fun ReadingPage(
     onNavAction: (NavigationAction) -> Unit,
     onNavigateToStylePage: () -> Unit,
 ) {
-    val readerCanvasColor = Color(0xFF202426)
-    val readerPageColor = Color(0xFF2C3032)
+    val readerCanvasColor = Color(0xFF2B2B2B)
+    val readerPageColor = Color(0xFF2B2B2B)
     val readerPageShape = RoundedCornerShape(6.dp)
     val context = LocalContext.current
     val sharedContent = LocalSharedContent.current
@@ -113,8 +111,6 @@ fun ReadingPage(
                     val currentArticleIndex = articleSequence
                         .indexOf(readerState.articleId)
                         .coerceAtLeast(0)
-                    val canSwipePrevious = currentArticleIndex > 0
-                    val canSwipeNext = currentArticleIndex < articleSequence.lastIndex
                     val pagerState = rememberPagerState(initialPage = currentArticleIndex) {
                         articleSequence.size
                     }
@@ -136,27 +132,8 @@ fun ReadingPage(
                         state = pagerState,
                         modifier = Modifier
                             .fillMaxSize()
-                            .background(readerCanvasColor)
-                            .nestedScroll(
-                                remember(canSwipePrevious, canSwipeNext) {
-                                    object : NestedScrollConnection {
-                                        override fun onPreScroll(
-                                            available: Offset,
-                                            source: NestedScrollSource,
-                                        ): Offset {
-                                            val isBlocked =
-                                                (available.x > 0f && !canSwipePrevious) ||
-                                                    (available.x < 0f && !canSwipeNext)
-                                            return if (isBlocked) {
-                                                Offset(available.x, 0f)
-                                            } else {
-                                                Offset.Zero
-                                            }
-                                        }
-                                    }
-                                }
-                            ),
-                        contentPadding = PaddingValues(horizontal = 6.dp, vertical = 8.dp),
+                            .background(readerCanvasColor),
+                        contentPadding = PaddingValues(0.dp),
                         pageSpacing = 8.dp,
                         pageSize = PageSize.Fill,
                         flingBehavior = PagerDefaults.flingBehavior(
@@ -203,40 +180,60 @@ fun ReadingPage(
                         ) {
                             Box(
                                 modifier = Modifier
-                                    .fillMaxSize()
-                                    .background(readerPageColor, readerPageShape)
-                                    .clip(readerPageShape)
-                                    .graphicsLayer {
-                                        val pageOffset = (
-                                            pagerState.currentPage - page +
-                                                pagerState.currentPageOffsetFraction
-                                        ).coerceIn(-1f, 1f)
-                                        val distance = pageOffset.absoluteValue
-                                        cameraDistance = 12f * density
-                                        rotationY = pageOffset * -5f
-                                        scaleX = 1f - distance * 0.035f
-                                        scaleY = 1f - distance * 0.02f
-                                        shadowElevation = (1f - distance) * 10.dp.toPx()
-                                    },
+                                    .fillMaxSize(),
                                 contentAlignment = Alignment.Center,
                             ) {
-                                Content(
-                                    modifier = Modifier,
-                                    contentPadding = paddings,
-                                    content = pageState.content.text ?: "",
-                                    feedName = pageState.feedName,
-                                    title = pageState.title.orEmpty(),
-                                    author = pageState.author,
-                                    link = pageState.link,
-                                    publishedDate = pageState.publishedDate,
-                                    isLoading = pageState.content is ReaderState.Loading,
-                                    scrollState = scrollState,
-                                    listState = listState,
-                                    onImageClick = { imgUrl, altText ->
-                                        currentImageData = ImageData(imgUrl, altText)
-                                        showFullScreenImageViewer = true
-                                    },
-                                )
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .padding(
+                                            top = 40.dp,
+                                            end = 8.dp,
+                                            bottom = 40.dp,
+                                            start = 8.dp,
+                                        ),
+                                ) {
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxSize()
+                                            .background(readerPageColor, readerPageShape)
+                                            .clip(readerPageShape)
+                                            .clipToBounds(),
+                                    ) {
+                                        Content(
+                                            modifier = Modifier
+                                                .clip(RoundedCornerShape(10.dp))
+                                                .graphicsLayer {
+                                                val pageOffset = (
+                                                    pagerState.currentPage - page +
+                                                        pagerState.currentPageOffsetFraction
+                                                ).coerceIn(-1f, 1f)
+                                                val distance = pageOffset.absoluteValue
+                                                cameraDistance = 20f * density
+                                                rotationY = pageOffset * -24f
+                                                scaleX = 1f - distance * 0.10f
+                                                scaleY = 1f - distance * 0.06f
+                                                shadowElevation = (1f - distance) * 24.dp.toPx()
+                                            },
+                                            // ArticlePage owns the page insets. Do not pass Scaffold's
+                                            // system-bar padding into the scroll viewport again.
+                                            contentPadding = PaddingValues(0.dp),
+                                            content = pageState.content.text ?: "",
+                                            feedName = pageState.feedName,
+                                            title = pageState.title.orEmpty(),
+                                            author = pageState.author,
+                                            link = pageState.link,
+                                            publishedDate = pageState.publishedDate,
+                                            isLoading = pageState.content is ReaderState.Loading,
+                                            scrollState = scrollState,
+                                            listState = listState,
+                                            onImageClick = { imgUrl, altText ->
+                                                currentImageData = ImageData(imgUrl, altText)
+                                                showFullScreenImageViewer = true
+                                            },
+                                        )
+                                    }
+                                }
                             }
                         }
                     }

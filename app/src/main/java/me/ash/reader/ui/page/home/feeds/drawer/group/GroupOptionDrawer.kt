@@ -17,6 +17,7 @@ import androidx.compose.material.icons.outlined.OpenInBrowser
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
@@ -108,6 +109,27 @@ fun GroupOptionDrawer(
 
                     Spacer(modifier = Modifier.height(10.dp))
                     Preset(viewModel, group, context)
+
+                    val groupIndex = groupOptionUiState.groups.indexOfFirst { it.id == group?.id }
+                    if (groupIndex >= 0) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.Center,
+                        ) {
+                            TextButton(
+                                enabled = groupIndex > 0,
+                                onClick = { viewModel.moveGroup(-1) },
+                            ) {
+                                Text(stringResource(R.string.move_group_up))
+                            }
+                            TextButton(
+                                enabled = groupIndex < groupOptionUiState.groups.lastIndex,
+                                onClick = { viewModel.moveGroup(1) },
+                            ) {
+                                Text(stringResource(R.string.move_group_down))
+                            }
+                        }
+                    }
 
                     if (viewModel.rssService.get().moveSubscription && groupOptionUiState.groups.size != 1) {
                         Spacer(modifier = Modifier.height(26.dp))

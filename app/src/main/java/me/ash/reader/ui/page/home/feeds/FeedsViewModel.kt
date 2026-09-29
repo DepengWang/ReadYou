@@ -24,6 +24,7 @@ import kotlinx.coroutines.launch
 import me.ash.reader.R
 import me.ash.reader.domain.model.account.Account
 import me.ash.reader.domain.model.general.Filter
+import me.ash.reader.domain.model.group.Group
 import me.ash.reader.domain.service.AccountService
 import me.ash.reader.domain.service.RssService
 import me.ash.reader.infrastructure.android.AndroidStringsHelper
@@ -77,6 +78,12 @@ class FeedsViewModel @Inject constructor(
     }
 
     fun commitDiffs() = diffMapHolder.commitDiffsToDb()
+
+    fun reorderGroups(groups: List<Group>) {
+        applicationScope.launch(ioDispatcher) {
+            rssService.get().reorderGroups(groups)
+        }
+    }
 
     fun changeFilter(filterState: FilterState) {
         filterStateUseCase.updateFilterState(filterState)

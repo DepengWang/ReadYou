@@ -5,6 +5,7 @@ import androidx.hilt.work.HiltWorker
 import androidx.work.*
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
+import java.util.UUID
 import java.util.concurrent.TimeUnit
 import me.ash.reader.domain.model.account.Account
 import me.ash.reader.infrastructure.rss.ReaderCacheHelper
@@ -31,6 +32,7 @@ constructor(
             .get()
             .sync(accountId = accountId, feedId = feedId, groupId = groupId)
             .also {
+                PulseThumbnailWorker.enqueue(workManager, accountId)
                 rssService.get().clearKeepArchivedArticles().forEach {
                     readerCacheHelper.deleteCacheFor(articleId = it.id)
                 }
@@ -62,6 +64,7 @@ constructor(
         private const val SYNC_ONETIME_NAME = "SYNC_ONETIME"
 
         const val SYNC_TAG = "SYNC_TAG"
+        const val FEED_TAG_PREFIX = "SYNC_FEED_"
         const val READER_TAG = "READER_TAG"
         const val ONETIME_WORK_TAG = "ONETIME_WORK_TAG"
         const val PERIODIC_WORK_TAG = "PERIODIC_WORK_TAG"
@@ -75,18 +78,25 @@ constructor(
             workManager.cancelUniqueWork(READER_WORK_NAME_PERIODIC)
         }
 
-        fun enqueueOneTimeWork(workManager: WorkManager, inputData: Data = workDataOf()) {
+        fun enqueueOneTimeWork(workManager: WorkManager, inputData: Data = workDataOf()): UUID {
+            val request = OneTimeWorkRequestBuilder<SyncWorker>()
+                .addTag(SYNC_TAG)
+                .addTag(ONETIME_WORK_TAG)
+                .apply {
+                    inputData.getString("feedId")?.let { feedId ->
+                        addTag(FEED_TAG_PREFIX + feedId)
+                    }
+                }
+                .setInputData(inputData)
+                .build()
             workManager
                 .beginUniqueWork(
                     SYNC_ONETIME_NAME,
                     ExistingWorkPolicy.REPLACE,
-                    OneTimeWorkRequestBuilder<SyncWorker>()
-                        .addTag(SYNC_TAG)
-                        .addTag(ONETIME_WORK_TAG)
-                        .setInputData(inputData)
-                        .build(),
+                    request,
                 )
                 .enqueue()
+            return request.id
         }
 
         fun enqueuePeriodicWork(account: Account, workManager: WorkManager) {

@@ -911,6 +911,17 @@ interface ArticleDao {
         limit: Int = 10,
     ): Flow<List<ArticleWithFeed>>
 
+    @Query(
+        """
+        SELECT * FROM article
+        WHERE accountId = :accountId
+        AND img IS NOT NULL
+        AND TRIM(img) <> ''
+        ORDER BY date DESC
+        """
+    )
+    suspend fun queryArticlesWithImages(accountId: Int): List<Article>
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insert(vararg article: Article)
 

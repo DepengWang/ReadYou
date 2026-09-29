@@ -11,6 +11,7 @@ import javax.inject.Inject
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import me.ash.reader.BuildConfig
@@ -20,6 +21,7 @@ import me.ash.reader.domain.service.AppService
 import me.ash.reader.domain.service.LocalRssService
 import me.ash.reader.domain.service.OpmlService
 import me.ash.reader.domain.service.RssService
+import me.ash.reader.domain.service.PulseThumbnailWorker
 import me.ash.reader.infrastructure.db.AndroidDatabase
 import me.ash.reader.infrastructure.di.ApplicationScope
 import me.ash.reader.infrastructure.di.IODispatcher
@@ -102,6 +104,9 @@ class AndroidApp : Application(), Configuration.Provider {
         }
         applicationScope.launch {
             accountInit()
+            // Let the first local database-backed frame render before the
+            // optional startup sync competes for startup IO and CPU.
+            delay(800)
             workerInit()
             checkUpdate()
         }
@@ -130,6 +135,7 @@ class AndroidApp : Application(), Configuration.Provider {
 
     private suspend fun workerInit() {
         rssService.get().initSync()
+        PulseThumbnailWorker.enqueue(workManager, accountService.getCurrentAccountId())
     }
 
     private suspend fun checkUpdate() {

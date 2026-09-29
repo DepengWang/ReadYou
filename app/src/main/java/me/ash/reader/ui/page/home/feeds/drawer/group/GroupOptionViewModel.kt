@@ -211,6 +211,22 @@ class GroupOptionViewModel @Inject constructor(
     fun inputNewName(content: String) {
         _groupOptionUiState.update { it.copy(newName = content) }
     }
+
+    fun moveGroup(offset: Int) {
+        val state = _groupOptionUiState.value
+        val currentGroup = state.group ?: return
+        val currentIndex = state.groups.indexOfFirst { it.id == currentGroup.id }
+        val targetIndex = currentIndex + offset
+        if (currentIndex < 0 || targetIndex !in state.groups.indices) return
+
+        val reordered = state.groups.toMutableList().apply {
+            add(targetIndex, removeAt(currentIndex))
+        }
+        _groupOptionUiState.update { it.copy(groups = reordered) }
+        applicationScope.launch {
+            rssService.get().reorderGroups(reordered)
+        }
+    }
 }
 
 @OptIn(ExperimentalMaterialApi::class)

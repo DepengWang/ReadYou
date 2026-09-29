@@ -127,11 +127,13 @@ class MainActivity : AppCompatActivity() {
                                             listOf(Route.Feeds)
                                         }
                                         else -> {
-                                            if (
-                                                initialPage == InitialPagePreference.FlowPage.value
-                                            ) {
-                                                listOf(Route.Feeds, Route.Reading(null))
-                                            } else listOf(Route.Feeds)
+                                            when (initialPage) {
+                                                InitialPagePreference.FlowPage.value ->
+                                                    listOf(Route.Feeds, Route.Reading(null))
+                                                InitialPagePreference.PulsePage.value ->
+                                                    listOf(Route.Pulse)
+                                                else -> listOf(Route.Feeds)
+                                            }
                                         }
                                     }
                             }

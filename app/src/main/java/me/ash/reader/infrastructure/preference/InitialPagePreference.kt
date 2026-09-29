@@ -16,6 +16,7 @@ val LocalInitialPage = compositionLocalOf<InitialPagePreference> { InitialPagePr
 sealed class InitialPagePreference(val value: Int) : Preference() {
     object FeedsPage : InitialPagePreference(0)
     object FlowPage : InitialPagePreference(1)
+    object PulsePage : InitialPagePreference(2)
 
     override fun put(context: Context, scope: CoroutineScope) {
         scope.launch {
@@ -30,17 +31,19 @@ sealed class InitialPagePreference(val value: Int) : Preference() {
         when (this) {
             FeedsPage -> context.getString(R.string.feeds_page)
             FlowPage -> context.getString(R.string.flow_page)
+            PulsePage -> context.getString(R.string.pulse_page)
         }
 
     companion object {
 
         val default = FeedsPage
-        val values = listOf(FeedsPage, FlowPage)
+        val values = listOf(FeedsPage, FlowPage, PulsePage)
 
         fun fromPreferences(preferences: Preferences) =
             when (preferences[DataStoreKey.keys[initialPage]?.key as Preferences.Key<Int>]) {
                 0 -> FeedsPage
                 1 -> FlowPage
+                2 -> PulsePage
                 else -> default
             }
     }

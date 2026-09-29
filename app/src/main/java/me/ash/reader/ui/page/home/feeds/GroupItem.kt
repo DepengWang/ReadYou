@@ -4,7 +4,10 @@ import android.view.HapticFeedbackConstants
 import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.awaitLongPressOrCancellation
+import androidx.compose.foundation.gestures.drag
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
@@ -22,6 +25,9 @@ import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.input.pointer.positionChange
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import me.ash.reader.R
 import me.ash.reader.domain.model.group.Group
@@ -38,6 +44,10 @@ fun GroupItem(
     groupOptionViewModel: GroupOptionViewModel = hiltViewModel(),
     onExpanded: () -> Unit = {},
     onLongClick: () -> Unit = {},
+    onDragStart: () -> Unit = {},
+    onDragBy: (Float) -> Unit = {},
+    onDragEnd: () -> Unit = {},
+    onDragCancel: () -> Unit = {},
     groupOnClick: () -> Unit = {},
 ) {
     val view = LocalView.current
@@ -45,15 +55,32 @@ fun GroupItem(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .combinedClickable(
-                onClick = {
-                    groupOnClick()
-                },
-                onLongClick = {
-                    groupOptionViewModel.fetchGroup(groupId = group.id)
-                    onLongClick()
+            .clickable { groupOnClick() }
+            .pointerInput(group.id) {
+                awaitEachGesture {
+                    val down = awaitFirstDown(requireUnconsumed = false)
+                    val longPress = awaitLongPressOrCancellation(down.id) ?: return@awaitEachGesture
+                    var moved = false
+                    onDragStart()
+                    view.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
+                    val completed = drag(longPress.id) { change ->
+                        val delta = change.positionChange()
+                        if (delta != Offset.Zero) {
+                            moved = true
+                            onDragBy(delta.y)
+                            change.consume()
+                        }
+                    }
+                    if (!moved) {
+                        groupOptionViewModel.fetchGroup(groupId = group.id)
+                        onLongClick()
+                    } else if (completed) {
+                        onDragEnd()
+                    } else {
+                        onDragCancel()
+                    }
                 }
-            )
+            }
             .padding(top = 22.dp)
     ) {
         Row(
