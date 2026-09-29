@@ -23,7 +23,6 @@ import androidx.navigation3.runtime.NavKey
 import androidx.navigation3.runtime.rememberSaveableStateHolderNavEntryDecorator
 import androidx.navigation3.ui.LocalNavAnimatedContentScope
 import androidx.navigation3.ui.NavDisplay
-import kotlinx.coroutines.delay
 import me.ash.reader.ui.motion.materialSharedAxisXIn
 import me.ash.reader.ui.motion.materialSharedAxisXOut
 import me.ash.reader.ui.page.adaptive.ArticleData
@@ -145,11 +144,12 @@ fun AppEntry(backStack: NavBackStack<NavKey>) {
                                 sharedTransitionScope = this@SharedTransitionLayout,
                                 animatedVisibilityScope = LocalNavAnimatedContentScope.current,
                                 navigateToFeeds = { backStack.add(Route.Feeds) },
-                                navigateToReading = { articleId, articleIds, articleIndex ->
+                                navigateToReading = { articleId, articleImageUrl, articleIds, articleIndex ->
                                     backStack.add(
                                         Route.Reading(
                                             articleId = articleId,
                                             openedFromPulse = true,
+                                            articleImageUrl = articleImageUrl,
                                             articleIds = articleIds,
                                             articleIndex = articleIndex,
                                         )
@@ -164,7 +164,6 @@ fun AppEntry(backStack: NavBackStack<NavKey>) {
 
                             LaunchedEffect(readingKey) {
                                 if (readingKey.articleId != null) {
-                                    delay(50L)
                                     navigator.navigateTo(
                                         ListDetailPaneScaffoldRole.Detail,
                                         ArticleData(
@@ -183,6 +182,9 @@ fun AppEntry(backStack: NavBackStack<NavKey>) {
                                 navigator = navigator,
                                 sharedTransitionScope = this@SharedTransitionLayout,
                                 animatedVisibilityScope = LocalNavAnimatedContentScope.current,
+                                initialArticleId = readingKey.articleId,
+                                initialArticleImageUrl = readingKey.articleImageUrl,
+                                sharedElementEnabled = readingKey.openedFromPulse,
                                 viewModel = viewModel,
                                 onBack = if (readingKey.openedFromPulse) {
                                     onBackFromPulseReading

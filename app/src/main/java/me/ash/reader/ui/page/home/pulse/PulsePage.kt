@@ -115,7 +115,7 @@ fun PulsePage(
     sharedTransitionScope: SharedTransitionScope,
     animatedVisibilityScope: AnimatedVisibilityScope,
     navigateToFeeds: () -> Unit,
-    navigateToReading: (String, List<String>, Int) -> Unit,
+    navigateToReading: (String, String?, List<String>, Int) -> Unit,
     viewModel: PulseViewModel = hiltViewModel(),
 ) {
     val groups = viewModel.groups.collectAsStateValue()
@@ -353,7 +353,13 @@ fun PulsePage(
                                     viewModel.markAsRead(article)
                                     val articleIds = item.feed.articles.map { it.article.id }
                                     val articleIndex = articleIds.indexOf(article.article.id)
-                                    navigateToReading(article.article.id, articleIds, articleIndex)
+                                    navigateToReading(
+                                        article.article.id,
+                                        item.feed.thumbnailPaths[article.article.id]
+                                            ?: article.article.img,
+                                        articleIds,
+                                        articleIndex,
+                                    )
                                 },
                                 onToggleStarred = viewModel::toggleStarred,
                             )

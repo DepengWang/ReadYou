@@ -10,6 +10,7 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.text.LocalBackgroundTextMeasurementExecutor
 import androidx.compose.material3.adaptive.ExperimentalMaterial3AdaptiveApi
@@ -43,6 +44,7 @@ import me.ash.reader.ui.component.reader.LocalTextContentWidth
 import me.ash.reader.ui.component.reader.MediumContentWidth
 import me.ash.reader.ui.page.home.flow.FlowPage
 import me.ash.reader.ui.page.home.reading.ReadingPage
+import me.ash.reader.ui.ext.collectAsStateValue
 import timber.log.Timber
 
 @Parcelize
@@ -60,6 +62,9 @@ fun ArticleListReaderPage(
     navigator: ThreePaneScaffoldNavigator<ArticleData>,
     sharedTransitionScope: SharedTransitionScope,
     animatedVisibilityScope: AnimatedVisibilityScope,
+    initialArticleId: String? = null,
+    initialArticleImageUrl: String? = null,
+    sharedElementEnabled: Boolean = false,
     viewModel: ArticleListReaderViewModel,
     onBack: () -> Unit,
     forceCloseOnBack: Boolean = false,
@@ -177,6 +182,7 @@ fun ArticleListReaderPage(
                 exitTransition = motionDataProvider.calculateExitTransition(paneRole),
             ) {
                 val contentKey = navigator.currentDestination?.contentKey
+                val readerArticleId = viewModel.readerStateStateFlow.collectAsStateValue().articleId
                 LaunchedEffect(contentKey) {
                     if (contentKey == null) {
                         delay(100L)
@@ -195,50 +201,62 @@ fun ArticleListReaderPage(
                         onBack()
                     }
 
-                    ReadingPage(
-                        viewModel = viewModel,
-                        navigationAction = navigationAction,
-                                onLoadArticle = { id, index ->
-                            scope.launch {
-                                navigator.navigateTo(
-                                    pane = ListDetailPaneScaffoldRole.Detail,
-                                    contentKey = ArticleData(
-                                        articleId = id,
-                                        listIndex = index,
-                                        articleIds = contentKey?.articleIds.orEmpty(),
-                                    ),
-                                )
-                            }
-                        },
-                        onNavAction = {
-                            when (it) {
-                                NavigationAction.Close -> {
-                                    if (forceCloseOnBack) {
-                                        onBack()
-                                    } else if (navigator.canNavigateBack(backBehavior)) {
-                                        scope
-                                            .launch { navigator.navigateBack(backBehavior) }
-                                            .invokeOnCompletion { viewModel.clearReadingData() }
-                                    } else {
-                                        onBack()
+                    val isExpectedArticle =
+                        !sharedElementEnabled ||
+                            initialArticleId == null ||
+                            contentKey?.articleId == initialArticleId &&
+                            readerArticleId == initialArticleId
+
+                    if (isExpectedArticle) {
+                        ReadingPage(
+                            viewModel = viewModel,
+                            navigationAction = navigationAction,
+                            onLoadArticle = { id, index ->
+                                scope.launch {
+                                    navigator.navigateTo(
+                                        pane = ListDetailPaneScaffoldRole.Detail,
+                                        contentKey = ArticleData(
+                                            articleId = id,
+                                            listIndex = index,
+                                            articleIds = contentKey?.articleIds.orEmpty(),
+                                        ),
+                                    )
+                                }
+                            },
+                            onNavAction = {
+                                when (it) {
+                                    NavigationAction.Close -> {
+                                        if (forceCloseOnBack) {
+                                            onBack()
+                                        } else if (navigator.canNavigateBack(backBehavior)) {
+                                            scope
+                                                .launch { navigator.navigateBack(backBehavior) }
+                                                .invokeOnCompletion { viewModel.clearReadingData() }
+                                        } else {
+                                            onBack()
+                                        }
+                                    }
+                                    NavigationAction.HideList -> {
+                                        scope.launch {
+                                            listAlpha = 0f
+                                            paneExpansionState.animateTo(hiddenAnchor)
+                                        }
+                                    }
+                                    NavigationAction.ExpandList -> {
+                                        listAlpha = 1f
+                                        scope.launch { paneExpansionState.animateTo(expandedAnchor) }
                                     }
                                 }
-                                NavigationAction.HideList -> {
-                                    scope.launch {
-                                        listAlpha = 0f
-                                        paneExpansionState.animateTo(hiddenAnchor)
-                                    }
-                                }
-                                NavigationAction.ExpandList -> {
-                                    listAlpha = 1f
-                                    scope.launch { paneExpansionState.animateTo(expandedAnchor) }
-                                }
-                            }
-                        },
-                        onNavigateToStylePage = onNavigateToStylePage,
-                        sharedTransitionScope = sharedTransitionScope,
-                        animatedVisibilityScope = animatedVisibilityScope,
-                    )
+                            },
+                            onNavigateToStylePage = onNavigateToStylePage,
+                            sharedTransitionScope = sharedTransitionScope,
+                            animatedVisibilityScope = animatedVisibilityScope,
+                            sharedElementEnabled = sharedElementEnabled,
+                            initialImageUrl = initialArticleImageUrl,
+                        )
+                    } else {
+                        Box(modifier = Modifier.fillMaxSize())
+                    }
                 }
             }
         },

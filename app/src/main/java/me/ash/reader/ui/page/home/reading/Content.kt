@@ -3,6 +3,7 @@ package me.ash.reader.ui.page.home.reading
 import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -16,6 +17,9 @@ import androidx.compose.foundation.text.selection.DisableSelection
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.animation.AnimatedVisibilityScope
+import androidx.compose.animation.ExperimentalSharedTransitionApi
+import androidx.compose.animation.SharedTransitionScope
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.LoadingIndicator
 import androidx.compose.runtime.Composable
@@ -36,16 +40,18 @@ import me.ash.reader.infrastructure.preference.LocalReadingSubheadUpperCase
 import me.ash.reader.infrastructure.preference.LocalReadingTextHorizontalPadding
 import me.ash.reader.infrastructure.preference.ReadingRendererPreference
 import me.ash.reader.ui.component.reader.Reader
+import me.ash.reader.ui.component.base.RYAsyncImage
 import me.ash.reader.ui.component.scrollbar.drawVerticalScrollIndicator
 import me.ash.reader.ui.component.webview.RYWebView
 import me.ash.reader.ui.ext.extractDomain
 import me.ash.reader.ui.ext.roundClick
 
-@OptIn(ExperimentalMaterial3ExpressiveApi::class)
+@OptIn(ExperimentalMaterial3ExpressiveApi::class, ExperimentalSharedTransitionApi::class)
 @Composable
 fun Content(
     modifier: Modifier = Modifier,
     content: String,
+    imageUrl: String? = null,
     feedName: String,
     title: String,
     author: String? = null,
@@ -56,6 +62,10 @@ fun Content(
     isLoading: Boolean,
     contentPadding: PaddingValues = PaddingValues(),
     onImageClick: ((imgUrl: String, altText: String) -> Unit)? = null,
+    articleId: String? = null,
+    sharedTransitionScope: SharedTransitionScope,
+    animatedVisibilityScope: AnimatedVisibilityScope,
+    sharedElementEnabled: Boolean = false,
 ) {
     val context = LocalContext.current
     val subheadUpperCase = LocalReadingSubheadUpperCase.current
@@ -84,6 +94,33 @@ fun Content(
             }
         }
 
+    val articleHero: @Composable () -> Unit = @Composable {
+        if (!imageUrl.isNullOrBlank()) {
+            val heroModifier = with(sharedTransitionScope) {
+                if (sharedElementEnabled && articleId != null) {
+                    Modifier.sharedElement(
+                        sharedContentState = rememberSharedContentState(
+                            "pulse-article-$articleId",
+                        ),
+                        animatedVisibilityScope = animatedVisibilityScope,
+                    )
+                } else {
+                    Modifier
+                }
+            }
+            Box(
+                modifier = heroModifier.fillMaxWidth().height(180.dp),
+            ) {
+                RYAsyncImage(
+                    modifier = Modifier.fillMaxSize(),
+                    data = imageUrl,
+                    contentScale = androidx.compose.ui.layout.ContentScale.Crop,
+                    contentDescription = null,
+                )
+            }
+        }
+    }
+
     if (isLoading) {
         Column { LoadingIndicator(modifier = Modifier.size(56.dp)) }
     } else {
@@ -105,6 +142,7 @@ fun Content(
                         horizontalAlignment = Alignment.CenterHorizontally,
                     ) {
                         Column(modifier = Modifier.fillMaxWidth()) {
+                            articleHero()
                             headline()
 
                             RYWebView(
@@ -140,6 +178,7 @@ fun Content(
                         ) {
                         item {
                             Spacer(modifier = Modifier.height(contentPadding.calculateTopPadding()))
+                            articleHero()
                             headline()
                         }
 

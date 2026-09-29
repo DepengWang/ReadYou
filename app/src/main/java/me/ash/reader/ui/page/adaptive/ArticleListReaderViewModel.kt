@@ -311,8 +311,9 @@ constructor(
                     it.copy(articleWithFeed = this, isStarred = article.isStarred, isUnread = false)
                 }
                 _readerState.update {
-                    it.copy(
+                        it.copy(
                             articleId = article.id,
+                            imageUrl = article.img,
                             feedName = feed.name,
                             title = article.title,
                             author = article.author,
@@ -340,6 +341,7 @@ constructor(
                     rssService.get().findArticleById(adjacent.articleId)?.let { articleWithFeed ->
                         val loadingState = ReaderState(
                             articleId = articleWithFeed.article.id,
+                            imageUrl = articleWithFeed.article.img,
                             feedName = articleWithFeed.feed.name,
                             title = articleWithFeed.article.title,
                             author = articleWithFeed.article.author,
@@ -533,6 +535,7 @@ data class ReadingUiState(
 
 data class ReaderState(
     val articleId: String? = null,
+    val imageUrl: String? = null,
     val feedName: String = "",
     val title: String? = null,
     val author: String? = null,

@@ -21,6 +21,7 @@ sealed interface Route : NavKey {
     data class Reading(
         val articleId: String?,
         val openedFromPulse: Boolean = false,
+        val articleImageUrl: String? = null,
         val articleIds: List<String> = emptyList(),
         val articleIndex: Int? = null,
     ) : Route {

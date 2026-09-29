@@ -76,6 +76,8 @@ fun ReadingPage(
     onNavigateToStylePage: () -> Unit,
     sharedTransitionScope: SharedTransitionScope,
     animatedVisibilityScope: AnimatedVisibilityScope,
+    sharedElementEnabled: Boolean = false,
+    initialImageUrl: String? = null,
 ) {
     val readerCanvasColor = Color(0xFF2B2B2B)
     val readerPageColor = Color(0xFF2B2B2B)
@@ -203,19 +205,11 @@ fun ReadingPage(
                                         ),
                                 ) {
                                     Box(
-                                        modifier = with(sharedTransitionScope) {
-                                            Modifier
-                                                .fillMaxSize()
-                                                .background(readerPageColor, readerPageShape)
-                                                .clip(readerPageShape)
-                                                .clipToBounds()
-                                                .sharedElement(
-                                                    sharedContentState = rememberSharedContentState(
-                                                        "pulse-article-${pageState.articleId}",
-                                                    ),
-                                                    animatedVisibilityScope = animatedVisibilityScope,
-                                                )
-                                        },
+                                        modifier = Modifier
+                                            .fillMaxSize()
+                                            .background(readerPageColor, readerPageShape)
+                                            .clip(readerPageShape)
+                                            .clipToBounds(),
                                     ) {
                                         Content(
                                             modifier = Modifier
@@ -236,6 +230,7 @@ fun ReadingPage(
                                             // system-bar padding into the scroll viewport again.
                                             contentPadding = PaddingValues(0.dp),
                                             content = pageState.content.text ?: "",
+                                            imageUrl = pageState.imageUrl ?: initialImageUrl,
                                             feedName = pageState.feedName,
                                             title = pageState.title.orEmpty(),
                                             author = pageState.author,
@@ -248,6 +243,10 @@ fun ReadingPage(
                                                 currentImageData = ImageData(imgUrl, altText)
                                                 showFullScreenImageViewer = true
                                             },
+                                            articleId = pageState.articleId,
+                                            sharedTransitionScope = sharedTransitionScope,
+                                            animatedVisibilityScope = animatedVisibilityScope,
+                                            sharedElementEnabled = sharedElementEnabled,
                                         )
                                     }
                                 }
