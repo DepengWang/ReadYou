@@ -40,7 +40,6 @@ import me.ash.reader.infrastructure.preference.LocalReadingSubheadUpperCase
 import me.ash.reader.infrastructure.preference.LocalReadingTextHorizontalPadding
 import me.ash.reader.infrastructure.preference.ReadingRendererPreference
 import me.ash.reader.ui.component.reader.Reader
-import me.ash.reader.ui.component.base.RYAsyncImage
 import me.ash.reader.ui.component.scrollbar.drawVerticalScrollIndicator
 import me.ash.reader.ui.component.webview.RYWebView
 import me.ash.reader.ui.ext.extractDomain
@@ -51,7 +50,6 @@ import me.ash.reader.ui.ext.roundClick
 fun Content(
     modifier: Modifier = Modifier,
     content: String,
-    imageUrl: String? = null,
     feedName: String,
     title: String,
     author: String? = null,
@@ -79,47 +77,32 @@ fun Content(
     }
     val uriHandler = LocalUriHandler.current
 
-    val headline =
-        @Composable {
-            Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp)) {
-                DisableSelection {
-                    Metadata(
-                        feedName = feedName,
-                        title = title,
-                        author = author,
-                        publishedDate = publishedDate,
-                        modifier = Modifier.roundClick { link?.let { uriHandler.openUri(it) } },
-                    )
-                }
-            }
-        }
-
-    val articleHero: @Composable () -> Unit = @Composable {
-        if (!imageUrl.isNullOrBlank()) {
-            val heroModifier = with(sharedTransitionScope) {
-                if (sharedElementEnabled && articleId != null) {
-                    Modifier.sharedElement(
-                        sharedContentState = rememberSharedContentState(
-                            "pulse-article-$articleId",
-                        ),
-                        animatedVisibilityScope = animatedVisibilityScope,
-                    )
-                } else {
-                    Modifier
-                }
-            }
-            Box(
-                modifier = heroModifier.fillMaxWidth().height(180.dp),
-            ) {
-                RYAsyncImage(
-                    modifier = Modifier.fillMaxSize(),
-                    data = imageUrl,
-                    contentScale = androidx.compose.ui.layout.ContentScale.Crop,
-                    contentDescription = null,
-                )
-            }
+    val headlineModifier = with(sharedTransitionScope) {
+        if (sharedElementEnabled && articleId != null) {
+            Modifier.sharedElement(
+                sharedContentState = rememberSharedContentState("pulse-article-$articleId"),
+                animatedVisibilityScope = animatedVisibilityScope,
+            )
+        } else {
+            Modifier
         }
     }
+    val headline =
+        @Composable {
+            Box(modifier = headlineModifier.fillMaxWidth()) {
+                Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp)) {
+                    DisableSelection {
+                        Metadata(
+                            feedName = feedName,
+                            title = title,
+                            author = author,
+                            publishedDate = publishedDate,
+                            modifier = Modifier.roundClick { link?.let { uriHandler.openUri(it) } },
+                        )
+                    }
+                }
+            }
+        }
 
     if (isLoading) {
         Column { LoadingIndicator(modifier = Modifier.size(56.dp)) }
@@ -142,7 +125,6 @@ fun Content(
                         horizontalAlignment = Alignment.CenterHorizontally,
                     ) {
                         Column(modifier = Modifier.fillMaxWidth()) {
-                            articleHero()
                             headline()
 
                             RYWebView(
@@ -178,7 +160,6 @@ fun Content(
                         ) {
                         item {
                             Spacer(modifier = Modifier.height(contentPadding.calculateTopPadding()))
-                            articleHero()
                             headline()
                         }
 

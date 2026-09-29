@@ -144,12 +144,11 @@ fun AppEntry(backStack: NavBackStack<NavKey>) {
                                 sharedTransitionScope = this@SharedTransitionLayout,
                                 animatedVisibilityScope = LocalNavAnimatedContentScope.current,
                                 navigateToFeeds = { backStack.add(Route.Feeds) },
-                                navigateToReading = { articleId, articleImageUrl, articleIds, articleIndex ->
+                                navigateToReading = { articleId, articleIds, articleIndex ->
                                     backStack.add(
                                         Route.Reading(
                                             articleId = articleId,
                                             openedFromPulse = true,
-                                            articleImageUrl = articleImageUrl,
                                             articleIds = articleIds,
                                             articleIndex = articleIndex,
                                         )
@@ -183,7 +182,6 @@ fun AppEntry(backStack: NavBackStack<NavKey>) {
                                 sharedTransitionScope = this@SharedTransitionLayout,
                                 animatedVisibilityScope = LocalNavAnimatedContentScope.current,
                                 initialArticleId = readingKey.articleId,
-                                initialArticleImageUrl = readingKey.articleImageUrl,
                                 sharedElementEnabled = readingKey.openedFromPulse,
                                 viewModel = viewModel,
                                 onBack = if (readingKey.openedFromPulse) {

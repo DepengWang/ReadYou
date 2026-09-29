@@ -63,7 +63,6 @@ fun ArticleListReaderPage(
     sharedTransitionScope: SharedTransitionScope,
     animatedVisibilityScope: AnimatedVisibilityScope,
     initialArticleId: String? = null,
-    initialArticleImageUrl: String? = null,
     sharedElementEnabled: Boolean = false,
     viewModel: ArticleListReaderViewModel,
     onBack: () -> Unit,
@@ -252,7 +251,6 @@ fun ArticleListReaderPage(
                             sharedTransitionScope = sharedTransitionScope,
                             animatedVisibilityScope = animatedVisibilityScope,
                             sharedElementEnabled = sharedElementEnabled,
-                            initialImageUrl = initialArticleImageUrl,
                         )
                     } else {
                         Box(modifier = Modifier.fillMaxSize())

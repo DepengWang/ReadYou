@@ -77,7 +77,6 @@ fun ReadingPage(
     sharedTransitionScope: SharedTransitionScope,
     animatedVisibilityScope: AnimatedVisibilityScope,
     sharedElementEnabled: Boolean = false,
-    initialImageUrl: String? = null,
 ) {
     val readerCanvasColor = Color(0xFF2B2B2B)
     val readerPageColor = Color(0xFF2B2B2B)
@@ -230,7 +229,6 @@ fun ReadingPage(
                                             // system-bar padding into the scroll viewport again.
                                             contentPadding = PaddingValues(0.dp),
                                             content = pageState.content.text ?: "",
-                                            imageUrl = pageState.imageUrl ?: initialImageUrl,
                                             feedName = pageState.feedName,
                                             title = pageState.title.orEmpty(),
                                             author = pageState.author,
