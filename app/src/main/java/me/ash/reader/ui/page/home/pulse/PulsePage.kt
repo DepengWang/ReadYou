@@ -671,12 +671,6 @@ private fun PulseFeedRow(
             }
             Spacer(modifier = Modifier.width(16.dp))
         }
-        Spacer(
-            modifier = Modifier
-                .height(4.dp)
-                .background(rowBackground),
-        )
-
         if (feed.articles.isEmpty()) {
             Text(
                 text = "暂无文章",
@@ -688,7 +682,7 @@ private fun PulseFeedRow(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(124.dp)
+                    .height(128.dp)
                     .background(articleStripBackground)
                     .pointerInput(feed.feed.id, dragThreshold) {
                         val touchSlop = viewConfiguration.touchSlop
@@ -787,13 +781,13 @@ private fun PulseFeedRow(
             ) {
                 Box(
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .height(124.dp)
+                        .fillMaxSize()
                         .graphicsLayer {
                             translationX = pullOffset + pullBackOffset.value
                         },
                 ) {
                     LazyRow(
+                        modifier = Modifier.fillMaxSize(),
                         contentPadding = PaddingValues(horizontal = 10.dp),
                         horizontalArrangement = Arrangement.spacedBy(6.dp),
                         verticalAlignment = Alignment.CenterVertically,
