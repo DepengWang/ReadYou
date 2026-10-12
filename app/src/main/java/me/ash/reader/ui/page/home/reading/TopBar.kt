@@ -45,14 +45,15 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import me.ash.reader.R
 import me.ash.reader.infrastructure.preference.LocalReadingPageTonalElevation
+import me.ash.reader.infrastructure.preference.LocalDarkTheme
 import me.ash.reader.infrastructure.preference.LocalSharedContent
 import me.ash.reader.infrastructure.preference.ReadingPageTonalElevationPreference
 import me.ash.reader.ui.component.base.FeedbackIconButton
 import me.ash.reader.ui.page.adaptive.NavigationAction
 
 private val sizeSpec = spring<IntSize>(stiffness = 700f)
-private val readerCanvasColor = Color(0xFF202426)
-private val readerScrolledBarColor = Color(0xFF2C3032)
+private val readerDarkCanvasColor = Color(0xFF202426)
+private val readerDarkScrolledBarColor = Color(0xFF2C3032)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -70,6 +71,9 @@ fun TopBar(
     val sharedContent = LocalSharedContent.current
     val isOutlined =
         LocalReadingPageTonalElevation.current == ReadingPageTonalElevationPreference.Outlined
+    val isDarkTheme = LocalDarkTheme.current.isDarkTheme()
+    val readerCanvasColor = if (isDarkTheme) readerDarkCanvasColor else Color.White
+    val readerScrolledBarColor = if (isDarkTheme) readerDarkScrolledBarColor else Color(0xFFF2F2F2)
 
     val containerColor by
         animateColorAsState(

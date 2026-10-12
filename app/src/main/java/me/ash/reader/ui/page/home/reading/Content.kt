@@ -33,6 +33,7 @@ import androidx.compose.ui.unit.dp
 import java.util.Date
 import kotlin.math.roundToInt
 import me.ash.reader.infrastructure.preference.LocalReadingRenderer
+import me.ash.reader.infrastructure.preference.LocalDarkTheme
 import me.ash.reader.infrastructure.preference.LocalReadingSubheadUpperCase
 import me.ash.reader.infrastructure.preference.LocalReadingTextHorizontalPadding
 import me.ash.reader.infrastructure.preference.ReadingRendererPreference
@@ -62,7 +63,11 @@ fun Content(
     val subheadUpperCase = LocalReadingSubheadUpperCase.current
     val renderer = LocalReadingRenderer.current
 
-    val articlePageBackgroundColor = Color(0xFF484848)
+    val articlePageBackgroundColor = if (LocalDarkTheme.current.isDarkTheme()) {
+        Color(0xFF484848)
+    } else {
+        Color.White
+    }
     val contentShape = RoundedCornerShape(10.dp)
     val textHorizontalPadding = 4.dp
     val webViewTextMargin = with(LocalDensity.current) {

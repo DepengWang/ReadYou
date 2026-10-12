@@ -47,6 +47,7 @@ import kotlinx.coroutines.launch
 import me.ash.reader.R
 import me.ash.reader.infrastructure.android.TextToSpeechManager
 import me.ash.reader.infrastructure.preference.LocalReadingAutoHideToolbar
+import me.ash.reader.infrastructure.preference.LocalDarkTheme
 import me.ash.reader.infrastructure.preference.LocalReadingBoldCharacters
 import me.ash.reader.infrastructure.preference.LocalReadingTextLineHeight
 import me.ash.reader.infrastructure.preference.LocalSharedContent
@@ -65,11 +66,16 @@ fun ReadingPage(
     viewModel: ArticleListReaderViewModel,
     navigationAction: NavigationAction,
     onLoadArticle: (String, Int) -> Unit,
+    onCurrentArticleChanged: (String) -> Unit = {},
     onNavAction: (NavigationAction) -> Unit,
     onNavigateToStylePage: () -> Unit,
 ) {
-    val readerCanvasColor = Color(0xFF2B2B2B)
-    val readerPageColor = Color(0xFF2B2B2B)
+    val readerCanvasColor = if (LocalDarkTheme.current.isDarkTheme()) {
+        Color(0xFF2B2B2B)
+    } else {
+        Color.White
+    }
+    val readerPageColor = readerCanvasColor
     val readerPageShape = RoundedCornerShape(6.dp)
     val context = LocalContext.current
     val sharedContent = LocalSharedContent.current
@@ -114,6 +120,9 @@ fun ReadingPage(
                     val pagerState = rememberPagerState(initialPage = currentArticleIndex) {
                         articleSequence.size
                     }
+                    LaunchedEffect(readerState.articleId) {
+                        readerState.articleId?.let(onCurrentArticleChanged)
+                    }
                     LaunchedEffect(currentArticleIndex) {
                         if (pagerState.currentPage != currentArticleIndex) {
                             pagerState.scrollToPage(currentArticleIndex)
@@ -123,6 +132,7 @@ fun ReadingPage(
                         snapshotFlow { pagerState.settledPage }.collect { page ->
                             val targetArticleId = articleSequence.getOrNull(page)
                             if (targetArticleId != null && targetArticleId != readerState.articleId) {
+                                onCurrentArticleChanged(targetArticleId)
                                 onLoadArticle(targetArticleId, page)
                             }
                         }
@@ -138,7 +148,7 @@ fun ReadingPage(
                         pageSize = PageSize.Fill,
                         flingBehavior = PagerDefaults.flingBehavior(
                             state = pagerState,
-                            snapPositionalThreshold = 0.25f,
+                            snapPositionalThreshold = 0.40f,
                         ),
                         beyondViewportPageCount = 1,
                         userScrollEnabled = articleSequence.size > 1,
@@ -204,11 +214,22 @@ fun ReadingPage(
                                             modifier = Modifier
                                                 .clip(RoundedCornerShape(10.dp))
                                                 .graphicsLayer {
-                                                val pageOffset = (
+                                                val rawPageOffset = (
                                                     pagerState.currentPage - page +
                                                         pagerState.currentPageOffsetFraction
                                                 ).coerceIn(-1f, 1f)
-                                                val distance = pageOffset.absoluteValue
+                                                val normalizedDistance = (
+                                                    (rawPageOffset.absoluteValue - 0.08f) / 0.92f
+                                                ).coerceIn(0f, 1f)
+                                                val smoothDistance = normalizedDistance *
+                                                    normalizedDistance *
+                                                    (3f - 2f * normalizedDistance)
+                                                val pageOffset = if (rawPageOffset < 0f) {
+                                                    -smoothDistance
+                                                } else {
+                                                    smoothDistance
+                                                }
+                                                val distance = smoothDistance
                                                 cameraDistance = 20f * density
                                                 rotationY = pageOffset * -24f
                                                 scaleX = 1f - distance * 0.10f

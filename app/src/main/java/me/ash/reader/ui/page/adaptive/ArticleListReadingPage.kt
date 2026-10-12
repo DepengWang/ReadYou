@@ -65,6 +65,7 @@ fun ArticleListReaderPage(
     initialArticleId: String? = null,
     sharedElementEnabled: Boolean = false,
     viewModel: ArticleListReaderViewModel,
+    onCurrentArticleChanged: (String) -> Unit = {},
     onBack: () -> Unit,
     forceCloseOnBack: Boolean = false,
     onNavigateToStylePage: () -> Unit,
@@ -222,6 +223,7 @@ fun ArticleListReaderPage(
                                     )
                                 }
                             },
+                            onCurrentArticleChanged = onCurrentArticleChanged,
                             onNavAction = {
                                 when (it) {
                                     NavigationAction.Close -> {

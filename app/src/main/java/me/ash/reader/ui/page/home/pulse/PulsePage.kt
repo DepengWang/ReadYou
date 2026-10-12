@@ -1,5 +1,6 @@
 package me.ash.reader.ui.page.home.pulse
 
+import android.os.SystemClock
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -9,6 +10,7 @@ import androidx.compose.animation.togetherWith
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.awaitEachGesture
@@ -54,11 +56,11 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -66,17 +68,23 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.changedToUp
+import androidx.compose.ui.input.pointer.changedToUpIgnoreConsumed
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.LayoutCoordinates
+import androidx.compose.ui.layout.boundsInRoot
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.Dp
@@ -97,23 +105,36 @@ import coil.request.ImageRequest
 import coil.size.Precision
 import coil.size.Scale
 import coil.size.Size
+import kotlin.math.abs
 import kotlin.math.exp
+import kotlin.math.sign
 import kotlinx.coroutines.launch
+import androidx.compose.runtime.withFrameNanos
+import me.ash.reader.infrastructure.preference.LocalDarkTheme
 
-private val PulseBackgroundColor = Color(0xFF484848)
-private val PulseToolbarColor = PulseBackgroundColor
+private val PulseLightBackgroundColor = Color.White
+private val PulseDarkBackgroundColor = Color(0xFF484848)
 private val PulseFeedRowHeight = 147.dp
 private val PulseArticleCardSize = 112.dp
 private val PulseRefreshDragThreshold = PulseArticleCardSize
+private val PulseGroupSwipeThreshold = 56.dp
+private const val PulseRefreshHoldDurationMillis = 200L
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PulsePage(
     navigateToFeeds: () -> Unit,
+    returnedArticleId: String?,
+    returnAnimationToken: Int,
     navigateToReading: (String, List<String>, Int) -> Unit,
     viewModel: PulseViewModel = hiltViewModel(),
 ) {
+    val isDarkTheme = LocalDarkTheme.current.isDarkTheme()
+    val pulseBackgroundColor = if (isDarkTheme) PulseDarkBackgroundColor else PulseLightBackgroundColor
+    val pulseToolbarColor = pulseBackgroundColor
     val groups = viewModel.groups.collectAsStateValue()
+    val visibleGroups = groups.filter { it.feeds.isNotEmpty() }
+    val articleCardBounds = remember { mutableMapOf<Any, Rect>() }
     val lastGroupId = viewModel.lastGroupId.collectAsStateValue()
     val refreshingFeedIds = viewModel.refreshingFeedIds.collectAsStateValue()
     val syncAllInProgress = viewModel.syncAllInProgress.collectAsStateValue()
@@ -158,7 +179,7 @@ fun PulsePage(
                 modifier = Modifier
                     .fillMaxWidth()
                     .windowInsetsPadding(WindowInsets.statusBars)
-                    .background(PulseToolbarColor),
+                    .background(pulseToolbarColor),
             ) {
                 Row(
                     modifier = Modifier
@@ -219,11 +240,9 @@ fun PulsePage(
                 }
             }
         },
-        // Original Pulse uses a neutral charcoal content canvas rather than
-        // the darker blue-gray surface used by the surrounding Read You pages.
-        containerColor = PulseBackgroundColor,
+        containerColor = pulseBackgroundColor,
     ) { contentPadding ->
-        if (groups.isEmpty() || groups.all { it.feeds.isEmpty() }) {
+        if (visibleGroups.isEmpty()) {
             Box(
                 modifier = Modifier.fillMaxSize().padding(contentPadding),
                 contentAlignment = Alignment.Center,
@@ -234,32 +253,35 @@ fun PulsePage(
                 )
             }
         } else {
-            LaunchedEffect(groups, lastGroupId) {
+            LaunchedEffect(visibleGroups, lastGroupId) {
                 if (lastGroupId == "__pulse_last_group_unset__") return@LaunchedEffect
                 val restoredGroupId = lastGroupId.takeIf { id ->
-                    groups.any { it.group.id == id }
+                    visibleGroups.any { it.group.id == id }
                 }
                 val targetGroupId = restoredGroupId ?: selectedGroupId.takeIf { id ->
-                    groups.any { it.group.id == id }
-                } ?: groups.firstOrNull()?.group?.id
+                    visibleGroups.any { it.group.id == id }
+                } ?: visibleGroups.firstOrNull()?.group?.id
                 targetGroupId?.let { groupId ->
                     selectedGroupId = groupId
                     viewModel.activateGroup(groupId)
                 }
             }
 
-            val selectedGroupIndex = groups.indexOfFirst { it.group.id == selectedGroupId }
+            val selectedGroupIndex = visibleGroups.indexOfFirst { it.group.id == selectedGroupId }
                 .takeIf { it >= 0 } ?: 0
-            val selectedGroup = groups[selectedGroupIndex]
+            val visibleGroupIds = visibleGroups.map { it.group.id }
+            val groupSwipeThresholdPx = with(LocalDensity.current) {
+                PulseGroupSwipeThreshold.toPx()
+            }
 
             Column(modifier = Modifier.fillMaxSize().padding(contentPadding)) {
                 ScrollableTabRow(
                     selectedTabIndex = selectedGroupIndex,
                     edgePadding = 12.dp,
-                    containerColor = PulseToolbarColor,
+                    containerColor = pulseToolbarColor,
                     contentColor = MaterialTheme.colorScheme.onSurface,
                 ) {
-                    groups.forEachIndexed { index, group ->
+                    visibleGroups.forEachIndexed { index, group ->
                         Tab(
                             selected = selectedGroupIndex == index,
                             onClick = {
@@ -294,13 +316,54 @@ fun PulsePage(
                     },
                     label = "pulse-group-content",
                 ) { groupIndex ->
-                    val group = groups[groupIndex]
+                    val group = visibleGroups[groupIndex]
                     val listState = rememberLazyListState()
+                    val density = LocalDensity.current
+                    var listCoordinates by remember { mutableStateOf<LayoutCoordinates?>(null) }
+                    var listViewportHeightPx by remember(group) { mutableIntStateOf(0) }
+                    var centeredBoundaryFeedKey by remember(group) { mutableStateOf<String?>(null) }
                     val pulseItems = remember(group) {
                         group.feeds.map { feed ->
                             PulseListItem.FeedRow(
                                 key = "feed:${feed.feed.id}",
                                 feed = feed,
+                            )
+                        }
+                    }
+
+                    val centerFeedPadding = with(density) {
+                        ((listViewportHeightPx - PulseFeedRowHeight.roundToPx()) / 2)
+                            .coerceAtLeast(0)
+                            .toDp()
+                    }
+
+                    LaunchedEffect(returnAnimationToken, returnedArticleId, pulseItems) {
+                        val articleId = returnedArticleId
+                        if (returnAnimationToken <= 0 || articleId == null) {
+                            return@LaunchedEffect
+                        }
+                        val targetIndex = pulseItems.indexOfFirst { item ->
+                            item.feed.articles.any { it.article.id == articleId }
+                        }
+                        if (targetIndex < 0) return@LaunchedEffect
+
+                        val targetItem = pulseItems[targetIndex]
+                        val isVisible = listState.layoutInfo.visibleItemsInfo.any {
+                            it.key == targetItem.key
+                        }
+                        if (!isVisible) {
+                            val isAtBoundary = targetIndex == 0 || targetIndex == pulseItems.lastIndex
+                            centeredBoundaryFeedKey = if (isAtBoundary) targetItem.key else null
+                            if (isAtBoundary) withFrameNanos { }
+
+                            val viewportHeight = listState.layoutInfo.viewportSize.height
+                            val rowHeight = with(density) {
+                                PulseFeedRowHeight.roundToPx()
+                            }
+                            val centerOffset = ((viewportHeight - rowHeight) / 2).coerceAtLeast(0)
+                            listState.animateScrollToItem(
+                                index = targetIndex,
+                                scrollOffset = if (targetIndex == 0) 0 else -centerOffset,
                             )
                         }
                     }
@@ -332,15 +395,93 @@ fun PulsePage(
                     }
 
                     LazyColumn(
-                        modifier = Modifier.fillMaxSize(),
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .onSizeChanged { listViewportHeightPx = it.height }
+                            .onGloballyPositioned { listCoordinates = it }
+                            .pointerInput(visibleGroupIds, selectedGroupIndex, groupSwipeThresholdPx) {
+                                if (visibleGroupIds.size < 2) return@pointerInput
+                                val touchSlop = viewConfiguration.touchSlop
+                                awaitEachGesture {
+                                    val down = awaitFirstDown(
+                                        requireUnconsumed = false,
+                                        pass = PointerEventPass.Initial,
+                                    )
+                                    val downInRoot = listCoordinates?.localToRoot(down.position)
+                                    if (downInRoot != null && articleCardBounds.values.any { bounds ->
+                                            bounds.contains(downInRoot)
+                                        }
+                                    ) {
+                                        return@awaitEachGesture
+                                    }
+
+                                    var horizontalGesture: Boolean? = null
+                                    var accumulatedX = 0f
+                                    var accumulatedY = 0f
+                                    while (true) {
+                                        val event = awaitPointerEvent(PointerEventPass.Initial)
+                                        val change = event.changes.firstOrNull { it.id == down.id }
+                                            ?: break
+                                        val deltaX = change.position.x - change.previousPosition.x
+                                        val deltaY = change.position.y - change.previousPosition.y
+                                        if (horizontalGesture == null) {
+                                            accumulatedX += deltaX
+                                            accumulatedY += deltaY
+                                            if (maxOf(abs(accumulatedX), abs(accumulatedY)) >= touchSlop) {
+                                                horizontalGesture = abs(accumulatedX) > abs(accumulatedY)
+                                                if (horizontalGesture == false) break
+                                                if (horizontalGesture == true) change.consume()
+                                            }
+                                        } else if (horizontalGesture == true) {
+                                            accumulatedX += deltaX
+                                            change.consume()
+                                        }
+                                        // This gesture consumes UP too; still observe its release.
+                                        if (change.changedToUpIgnoreConsumed()) {
+                                            if (
+                                                horizontalGesture == true &&
+                                                abs(accumulatedX) >= groupSwipeThresholdPx
+                                            ) {
+                                                val direction = if (accumulatedX < 0f) 1 else -1
+                                                val targetIndex = (selectedGroupIndex + direction)
+                                                    .coerceIn(0, visibleGroups.lastIndex)
+                                                if (targetIndex != selectedGroupIndex) {
+                                                    val targetGroupId = visibleGroups[targetIndex].group.id
+                                                    selectedGroupId = targetGroupId
+                                                    viewModel.activateGroup(targetGroupId)
+                                                }
+                                            }
+                                            break
+                                        }
+                                    }
+                                }
+                            },
                         state = listState,
-                        contentPadding = PaddingValues(top = 8.dp, bottom = 32.dp),
+                        contentPadding = PaddingValues(
+                            top = if (pulseItems.firstOrNull()?.key == centeredBoundaryFeedKey) {
+                                centerFeedPadding
+                            } else {
+                                8.dp
+                            },
+                            bottom = if (pulseItems.lastOrNull()?.key == centeredBoundaryFeedKey) {
+                                centerFeedPadding
+                            } else {
+                                32.dp
+                            },
+                        ),
                         verticalArrangement = Arrangement.spacedBy(8.dp),
                     ) {
                         items(pulseItems, key = { it.key }) { item ->
                             PulseFeedRow(
                                 feed = item.feed,
+                                isDarkTheme = isDarkTheme,
                                 isRefreshing = refreshingFeedIds.contains(item.feed.feed.id),
+                                returnedArticleId = returnedArticleId,
+                                returnAnimationToken = returnAnimationToken,
+                                onCardBoundsChanged = { key, bounds ->
+                                    if (bounds == null) articleCardBounds.remove(key)
+                                    else articleCardBounds[key] = bounds
+                                },
                                 onRefresh = { viewModel.refreshFeed(item.feed.feed) },
                                 onArticleClick = { article ->
                                     viewModel.markAsRead(article)
@@ -375,36 +516,55 @@ private sealed interface PulseListItem {
 @Composable
 private fun PulseFeedRow(
     feed: PulseFeed,
+    isDarkTheme: Boolean,
     isRefreshing: Boolean,
+    returnedArticleId: String?,
+    returnAnimationToken: Int,
+    onCardBoundsChanged: (Any, Rect?) -> Unit,
     onRefresh: () -> Unit,
     onArticleClick: (ArticleWithFeed) -> Unit,
     onToggleStarred: (ArticleWithFeed) -> Unit,
 ) {
     val listState = rememberLazyListState()
+    var highlightReadyToken by remember(feed.feed.id) { mutableIntStateOf(0) }
+    val density = LocalDensity.current
     val dragThreshold = with(LocalDensity.current) { PulseRefreshDragThreshold.toPx() }
     var pullOffset by remember { mutableFloatStateOf(0f) }
     val pullBackOffset = remember { Animatable(0f) }
     val pullBackScope = rememberCoroutineScope()
 
-    LaunchedEffect(listState, feed.feed.id) {
-        var wasScrollableToEnd = false
-        snapshotFlow { listState.canScrollBackward }.collect { canScrollBackward ->
-            if (canScrollBackward) {
-                wasScrollableToEnd = true
-            } else if (wasScrollableToEnd) {
-                wasScrollableToEnd = false
-                onRefresh()
-            }
+    LaunchedEffect(returnedArticleId, returnAnimationToken, feed.feed.id, feed.articles) {
+        val articleId = returnedArticleId
+        if (returnAnimationToken <= 0 || articleId == null) return@LaunchedEffect
+        val targetIndex = feed.articles.indexOfFirst { it.article.id == articleId }
+        if (targetIndex < 0) return@LaunchedEffect
+
+        val isVisible = listState.layoutInfo.visibleItemsInfo.any { it.key == articleId }
+        if (!isVisible) {
+            val cardWidth = with(density) { PulseArticleCardSize.roundToPx() }
+            val centerOffset = ((listState.layoutInfo.viewportSize.width - cardWidth) / 2)
+                .coerceAtLeast(0)
+            listState.animateScrollToItem(
+                index = targetIndex,
+                scrollOffset = if (
+                    targetIndex == 0 || targetIndex == feed.articles.lastIndex
+                ) {
+                    0
+                } else {
+                    -centerOffset
+                },
+            )
         }
+        highlightReadyToken = returnAnimationToken
     }
 
     val unreadCount = feed.articles.count { it.article.isUnread }
     val hasUnread = unreadCount > 0
-    val rowBackground = Color(0xFF2B2B2B)
-    val headerBackground = PulseBackgroundColor
-    val flagColor = Color(0xFF333333)
-    val foldColor = Color(0xFF4A4A4A)
-    val foldDetailColor = Color(0xFF666666)
+    val rowBackground = if (isDarkTheme) Color(0xFF2B2B2B) else Color(0xFFF2F2F2)
+    val headerBackground = if (isDarkTheme) PulseDarkBackgroundColor else Color.White
+    val flagColor = if (isDarkTheme) Color(0xFF333333) else Color(0xFFE0E0E0)
+    val foldColor = if (isDarkTheme) Color(0xFF4A4A4A) else Color(0xFFC8C8C8)
+    val foldDetailColor = if (isDarkTheme) Color(0xFF666666) else Color(0xFF9E9E9E)
 
     Column(
         modifier = Modifier
@@ -512,24 +672,56 @@ private fun PulseFeedRow(
                     .height(116.dp)
                     .background(rowBackground)
                     .pointerInput(feed.feed.id, dragThreshold) {
+                        val touchSlop = viewConfiguration.touchSlop
                         awaitEachGesture {
                             val down = awaitFirstDown(
                                 requireUnconsumed = false,
                                 pass = PointerEventPass.Initial,
                             )
                             var reachedLeft = !listState.canScrollBackward
+                            var horizontalGesture: Boolean? = null
+                            var accumulatedX = 0f
+                            var accumulatedY = 0f
                             var dragDistance = 0f
+                            var refreshThresholdReachedAt: Long? = null
                             try {
                                 while (true) {
                                     val event = awaitPointerEvent(PointerEventPass.Initial)
                                     val change = event.changes.firstOrNull { it.id == down.id }
                                         ?: break
-                                    if (!reachedLeft && !listState.canScrollBackward) {
-                                        reachedLeft = true
-                                        dragDistance = 0f
+                                    if (change.isConsumed) break
+                                    val deltaX = change.position.x - change.previousPosition.x
+                                    val deltaY = change.position.y - change.previousPosition.y
+                                    var horizontalDelta = 0f
+                                    if (horizontalGesture == null) {
+                                        accumulatedX += deltaX
+                                        accumulatedY += deltaY
+                                        if (maxOf(abs(accumulatedX), abs(accumulatedY)) >= touchSlop) {
+                                            horizontalGesture = abs(accumulatedX) > abs(accumulatedY)
+                                            if (horizontalGesture == true) {
+                                                horizontalDelta =
+                                                    (abs(accumulatedX) - touchSlop)
+                                                        .coerceAtLeast(0f) * sign(accumulatedX)
+                                            }
+                                        }
+                                    } else if (horizontalGesture == true) {
+                                        horizontalDelta = deltaX
                                     }
-                                    if (reachedLeft) {
-                                        dragDistance += change.position.x - change.previousPosition.x
+
+                                    if (horizontalGesture == true) {
+                                        if (!reachedLeft && !listState.canScrollBackward) {
+                                            reachedLeft = true
+                                            dragDistance = 0f
+                                            refreshThresholdReachedAt = null
+                                        }
+                                    }
+                                    if (horizontalGesture == true && reachedLeft) {
+                                        dragDistance += horizontalDelta
+                                        refreshThresholdReachedAt = if (dragDistance >= dragThreshold) {
+                                            refreshThresholdReachedAt ?: SystemClock.uptimeMillis()
+                                        } else {
+                                            null
+                                        }
                                         val rightPull = dragDistance.coerceAtLeast(0f)
                                         // Resistance: the farther the user pulls, the less the
                                         // image follows, creating a soft "cannot pull further"
@@ -540,7 +732,16 @@ private fun PulseFeedRow(
                                         pullOffset = resistedOffset.coerceAtMost(dragThreshold)
                                     }
                                     if (change.changedToUp()) {
-                                        if (reachedLeft && dragDistance >= dragThreshold) {
+                                        val heldAtThresholdLongEnough =
+                                            refreshThresholdReachedAt?.let { reachedAt ->
+                                                SystemClock.uptimeMillis() - reachedAt >=
+                                                    PulseRefreshHoldDurationMillis
+                                            } == true
+                                        if (
+                                            reachedLeft &&
+                                                dragDistance >= dragThreshold &&
+                                                heldAtThresholdLongEnough
+                                        ) {
                                             onRefresh()
                                         }
                                         break
@@ -584,6 +785,10 @@ private fun PulseFeedRow(
                                 article = article,
                                 size = PulseArticleCardSize,
                                 thumbnailPath = feed.thumbnailPaths[article.article.id],
+                                onCardBoundsChanged = onCardBoundsChanged,
+                                shouldHighlightOnReturn = article.article.id == returnedArticleId &&
+                                    highlightReadyToken == returnAnimationToken,
+                                returnAnimationToken = highlightReadyToken,
                                 onClick = { onArticleClick(article) },
                                 onToggleStarred = { onToggleStarred(article) },
                             )
@@ -593,7 +798,7 @@ private fun PulseFeedRow(
                 val visiblePullOffset = maxOf(pullOffset, pullBackOffset.value)
                 Text(
                     text = "刷新",
-                    color = Color(0xFFBDBDBD),
+                    color = if (isDarkTheme) Color(0xFFBDBDBD) else Color(0xFF222222),
                     fontSize = 18.sp,
                     fontWeight = FontWeight.SemiBold,
                     modifier = Modifier
@@ -616,16 +821,41 @@ private fun PulseArticleCard(
     article: ArticleWithFeed,
     size: Dp,
     thumbnailPath: String?,
+    onCardBoundsChanged: (Any, Rect?) -> Unit,
+    shouldHighlightOnReturn: Boolean,
+    returnAnimationToken: Int,
     onClick: () -> Unit,
     onToggleStarred: () -> Unit,
 ) {
     val shape = RoundedCornerShape(0.dp)
+    val cardBoundsKey = remember { Any() }
+    val returnHighlightAlpha = remember(article.article.id) { Animatable(1f) }
     val articleImageAlpha = if (article.article.isUnread) 1f else 0.74f
     val requestedImageSize = with(LocalDensity.current) { size.toPx().toInt().coerceAtLeast(1) }
+
+    LaunchedEffect(article.article.id, shouldHighlightOnReturn, returnAnimationToken) {
+        if (shouldHighlightOnReturn && returnAnimationToken > 0) {
+            returnHighlightAlpha.animateTo(
+                targetValue = 0.76f,
+                animationSpec = tween(durationMillis = 240, easing = FastOutSlowInEasing),
+            )
+            returnHighlightAlpha.animateTo(
+                targetValue = 1f,
+                animationSpec = tween(durationMillis = 360, easing = FastOutSlowInEasing),
+            )
+        }
+    }
+
+    DisposableEffect(cardBoundsKey) {
+        onDispose { onCardBoundsChanged(cardBoundsKey, null) }
+    }
+
     Card(
         modifier = Modifier
             .width(size)
             .height(size)
+            .onGloballyPositioned { onCardBoundsChanged(cardBoundsKey, it.boundsInRoot()) }
+            .graphicsLayer { alpha = returnHighlightAlpha.value }
             .clickable(onClick = onClick),
         shape = shape,
         colors = CardDefaults.cardColors(

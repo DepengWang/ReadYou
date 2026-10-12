@@ -40,6 +40,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import me.ash.reader.R
 import me.ash.reader.infrastructure.preference.LocalReadingPageTonalElevation
+import me.ash.reader.infrastructure.preference.LocalDarkTheme
 import me.ash.reader.infrastructure.preference.LocalReadingRenderer
 import me.ash.reader.infrastructure.preference.ReadingPageTonalElevationPreference
 import me.ash.reader.infrastructure.preference.ReadingRendererPreference
@@ -47,7 +48,7 @@ import me.ash.reader.ui.component.base.CanBeDisabledIconButton
 import me.ash.reader.ui.component.webview.BoldCharactersIcon
 
 private val sizeSpec = spring<IntSize>(stiffness = 700f)
-private val readerCanvasColor = Color(0xFF202426)
+private val readerDarkCanvasColor = Color(0xFF202426)
 
 @Composable
 fun BottomBar(
@@ -67,6 +68,11 @@ fun BottomBar(
     onReadAloud: () -> Unit = {},
 ) {
     val tonalElevation = LocalReadingPageTonalElevation.current
+    val readerCanvasColor = if (LocalDarkTheme.current.isDarkTheme()) {
+        readerDarkCanvasColor
+    } else {
+        Color.White
+    }
     val isOutlined = tonalElevation == ReadingPageTonalElevationPreference.Outlined
     val renderer = LocalReadingRenderer.current
 

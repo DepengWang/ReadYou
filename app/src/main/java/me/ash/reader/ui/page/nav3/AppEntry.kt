@@ -13,6 +13,9 @@ import androidx.compose.material3.adaptive.layout.calculatePaneScaffoldDirective
 import androidx.compose.material3.adaptive.navigation.rememberListDetailPaneScaffoldNavigator
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
@@ -64,13 +67,19 @@ private const val INITIAL_OFFSET_FACTOR = 0.10f
 @Composable
 fun AppEntry(backStack: NavBackStack<NavKey>) {
     val subscribeViewModel = hiltViewModel<SubscribeViewModel>()
+    val pulseReturnArticleId = remember { mutableStateOf<String?>(null) }
+    val pulseCurrentArticleId = remember { mutableStateOf<String?>(null) }
+    val pulseReturnAnimationToken = remember { mutableIntStateOf(0) }
 
     val onBack: () -> Unit = {
         if (backStack.size == 1) backStack[0] = Route.Feeds else backStack.removeLastOrNull()
     }
 
     val onBackFromPulseReading: () -> Unit = {
-        if (backStack.lastOrNull() is Route.Reading) {
+        val readingRoute = backStack.lastOrNull() as? Route.Reading
+        if (readingRoute?.openedFromPulse == true) {
+            pulseReturnArticleId.value = pulseCurrentArticleId.value ?: readingRoute.articleId
+            pulseReturnAnimationToken.intValue++
             backStack.removeLastOrNull()
         }
     }
@@ -142,7 +151,10 @@ fun AppEntry(backStack: NavBackStack<NavKey>) {
                         NavEntry(key) {
                             PulsePage(
                                 navigateToFeeds = { backStack.add(Route.Feeds) },
+                                returnedArticleId = pulseReturnArticleId.value,
+                                returnAnimationToken = pulseReturnAnimationToken.intValue,
                                 navigateToReading = { articleId, articleIds, articleIndex ->
+                                    pulseCurrentArticleId.value = articleId
                                     backStack.add(
                                         Route.Reading(
                                             articleId = articleId,
@@ -181,6 +193,11 @@ fun AppEntry(backStack: NavBackStack<NavKey>) {
                                 animatedVisibilityScope = LocalNavAnimatedContentScope.current,
                                 initialArticleId = readingKey.articleId,
                                 viewModel = viewModel,
+                                onCurrentArticleChanged = { articleId ->
+                                    if (readingKey.openedFromPulse) {
+                                        pulseCurrentArticleId.value = articleId
+                                    }
+                                },
                                 onBack = if (readingKey.openedFromPulse) {
                                     onBackFromPulseReading
                                 } else {
