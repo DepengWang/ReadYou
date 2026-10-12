@@ -200,7 +200,7 @@ fun PulsePage(
                         contentAlignment = Alignment.Center,
                     ) {
                         Text(
-                            text = "Read You",
+                            text = "Pulse News",
                             style = MaterialTheme.typography.titleMedium,
                             color = MaterialTheme.colorScheme.onSurface,
                         )
