@@ -64,7 +64,8 @@ fun ArticleListReaderPage(
     sharedTransitionScope: SharedTransitionScope,
     animatedVisibilityScope: AnimatedVisibilityScope,
     initialArticleId: String? = null,
-    sharedElementEnabled: Boolean = false,
+    initialArticleIndex: Int? = null,
+    initialArticleIds: List<String> = emptyList(),
     viewModel: ArticleListReaderViewModel,
     onCurrentArticleChanged: (String) -> Unit = {},
     onBack: () -> Unit,
@@ -210,15 +211,36 @@ fun ArticleListReaderPage(
             ) {
                 val contentKey = navigator.currentDestination?.contentKey
                 val readerArticleId = viewModel.readerStateStateFlow.collectAsStateValue().articleId
-                LaunchedEffect(contentKey) {
-                    if (contentKey == null) {
+                val readingArticleId =
+                    viewModel.readingUiState.collectAsStateValue().articleWithFeed?.article?.id
+                val initialArticlePending =
+                    initialArticleId != null && contentKey?.articleId != initialArticleId
+                val articleToLoad =
+                    if (initialArticlePending) {
+                        initialArticleId
+                    } else {
+                        contentKey?.articleId
+                    }
+
+                LaunchedEffect(articleToLoad) {
+                    if (articleToLoad == null) {
                         delay(100L)
                         viewModel.clearReadingData()
                     } else {
                         viewModel.initData(
-                            articleId = contentKey.articleId,
-                            listIndex = contentKey.listIndex,
-                            articleIds = contentKey.articleIds,
+                            articleId = articleToLoad,
+                            listIndex =
+                                if (initialArticlePending) {
+                                    initialArticleIndex
+                                } else {
+                                    contentKey?.listIndex
+                                },
+                            articleIds =
+                                if (initialArticlePending) {
+                                    initialArticleIds
+                                } else {
+                                    contentKey?.articleIds.orEmpty()
+                                },
                         )
                     }
                 }
@@ -229,10 +251,10 @@ fun ArticleListReaderPage(
                     }
 
                     val isExpectedArticle =
-                        !sharedElementEnabled ||
-                            initialArticleId == null ||
+                        initialArticleId == null ||
                             contentKey?.articleId == initialArticleId &&
-                            readerArticleId == initialArticleId
+                            readerArticleId == initialArticleId &&
+                            readingArticleId == initialArticleId
 
                     if (isExpectedArticle) {
                         ReadingPage(

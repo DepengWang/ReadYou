@@ -227,6 +227,8 @@ fun AppEntry(backStack: NavBackStack<NavKey>) {
                                 sharedTransitionScope = this@SharedTransitionLayout,
                                 animatedVisibilityScope = LocalNavAnimatedContentScope.current,
                                 initialArticleId = readingKey.articleId,
+                                initialArticleIndex = readingKey.articleIndex,
+                                initialArticleIds = readingKey.articleIds,
                                 viewModel = viewModel,
                                 onCurrentArticleChanged = { articleId ->
                                     if (readingKey.openedFromPulse) {
