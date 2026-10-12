@@ -117,6 +117,11 @@ private val PulseLightBackgroundColor = Color.White
 private val PulseDarkBackgroundColor = Color.Black
 private val PulseFeedRowHeight = 155.dp
 private val PulseArticleCardSize = 112.dp
+private val PulseFeedAccentWidth = 4.dp
+private val PulseArticleEdgeSpacing = 8.dp
+private val PulseArticleCardSpacing = 8.dp
+private val PulseFeedImageStripHeight =
+    PulseArticleCardSize + PulseArticleEdgeSpacing * 2
 private val PulseRefreshDragThreshold = PulseArticleCardSize
 private val PulseGroupSwipeThreshold = 56.dp
 private const val PulseRefreshHoldDurationMillis = 200L
@@ -574,7 +579,7 @@ private fun PulseFeedRow(
             .background(rowBackground)
             .drawWithContent {
                 drawContent()
-                val accentWidth = 4.dp.toPx()
+                val accentWidth = PulseFeedAccentWidth.toPx()
                 drawRect(
                     color = flagColor,
                     topLeft = Offset.Zero,
@@ -682,7 +687,7 @@ private fun PulseFeedRow(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(128.dp)
+                    .height(PulseFeedImageStripHeight)
                     .background(articleStripBackground)
                     .pointerInput(feed.feed.id, dragThreshold) {
                         val touchSlop = viewConfiguration.touchSlop
@@ -788,8 +793,11 @@ private fun PulseFeedRow(
                 ) {
                     LazyRow(
                         modifier = Modifier.fillMaxSize(),
-                        contentPadding = PaddingValues(horizontal = 10.dp),
-                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        contentPadding = PaddingValues(
+                            start = PulseFeedAccentWidth + PulseArticleEdgeSpacing,
+                            end = PulseArticleEdgeSpacing,
+                        ),
+                        horizontalArrangement = Arrangement.spacedBy(PulseArticleCardSpacing),
                         verticalAlignment = Alignment.CenterVertically,
                         state = listState,
                     ) {
