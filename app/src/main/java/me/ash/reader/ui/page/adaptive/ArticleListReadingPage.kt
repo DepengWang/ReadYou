@@ -210,7 +210,8 @@ fun ArticleListReaderPage(
                 ),
             ) {
                 val contentKey = navigator.currentDestination?.contentKey
-                val readerArticleId = viewModel.readerStateStateFlow.collectAsStateValue().articleId
+                val readerState = viewModel.readerStateStateFlow.collectAsStateValue()
+                val readerArticleId = readerState.articleId
                 val readingArticleId =
                     viewModel.readingUiState.collectAsStateValue().articleWithFeed?.article?.id
                 val initialArticlePending =
@@ -254,7 +255,8 @@ fun ArticleListReaderPage(
                         initialArticleId == null ||
                             contentKey?.articleId == initialArticleId &&
                             readerArticleId == initialArticleId &&
-                            readingArticleId == initialArticleId
+                            readingArticleId == initialArticleId &&
+                            readerState.content !is ReaderState.Loading
 
                     if (isExpectedArticle) {
                         ReadingPage(
