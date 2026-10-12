@@ -66,6 +66,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
@@ -560,7 +561,6 @@ private fun PulseFeedRow(
 
     val unreadCount = feed.articles.count { it.article.isUnread }
     val hasUnread = unreadCount > 0
-    val headerBackground = if (isDarkTheme) PulseDarkBackgroundColor else Color.White
     val rowBackground = if (isDarkTheme) Color(0xFF161616) else Color(0xFFF2F2F2)
     val flagColor = if (isDarkTheme) Color(0xFF292929) else Color(0xFFE0E0E0)
     val foldColor = if (isDarkTheme) Color(0xFF3A3A3A) else Color(0xFFC8C8C8)
@@ -570,13 +570,27 @@ private fun PulseFeedRow(
         modifier = Modifier
             .fillMaxWidth()
             .height(PulseFeedRowHeight)
-            .background(rowBackground),
+            .background(rowBackground)
+            .drawWithContent {
+                drawContent()
+                val accentWidth = 4.dp.toPx()
+                drawRect(
+                    color = flagColor,
+                    topLeft = Offset.Zero,
+                    size = androidx.compose.ui.geometry.Size(accentWidth, size.height),
+                )
+                drawRect(
+                    color = flagColor,
+                    topLeft = Offset(0f, size.height - accentWidth),
+                    size = androidx.compose.ui.geometry.Size(size.width, accentWidth),
+                )
+            },
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(27.dp)
-                .background(headerBackground),
+                .background(rowBackground),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Box(
@@ -659,7 +673,7 @@ private fun PulseFeedRow(
         Spacer(
             modifier = Modifier
                 .height(4.dp)
-                .background(headerBackground),
+                .background(rowBackground),
         )
 
         if (feed.articles.isEmpty()) {
@@ -674,7 +688,7 @@ private fun PulseFeedRow(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(124.dp)
-                    .background(headerBackground)
+                    .background(rowBackground)
                     .pointerInput(feed.feed.id, dragThreshold) {
                         val touchSlop = viewConfiguration.touchSlop
                         awaitEachGesture {
