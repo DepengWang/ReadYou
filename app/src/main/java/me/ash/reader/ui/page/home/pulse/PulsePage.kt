@@ -560,7 +560,7 @@ private fun PulseFeedRow(
 
     val unreadCount = feed.articles.count { it.article.isUnread }
     val hasUnread = unreadCount > 0
-    val headerBackground = if (isDarkTheme) Color(0xFF292929) else Color.White
+    val headerBackground = if (isDarkTheme) PulseDarkBackgroundColor else Color.White
     val rowBackground = if (isDarkTheme) Color(0xFF161616) else Color(0xFFF2F2F2)
     val flagColor = if (isDarkTheme) Color(0xFF292929) else Color(0xFFE0E0E0)
     val foldColor = if (isDarkTheme) Color(0xFF3A3A3A) else Color(0xFFC8C8C8)
