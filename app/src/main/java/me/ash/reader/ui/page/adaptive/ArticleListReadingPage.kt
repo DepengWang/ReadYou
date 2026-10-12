@@ -28,6 +28,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -125,6 +126,9 @@ fun ArticleListReaderPage(
         }
 
     var listAlpha by rememberSaveable { mutableFloatStateOf(1f) }
+    var initialArticleReady by remember(initialArticleId) {
+        mutableStateOf(initialArticleId == null)
+    }
 
     LaunchedEffect(isTwoPane) {
         Timber.d("isTwoPane: $isTwoPane")
@@ -214,6 +218,12 @@ fun ArticleListReaderPage(
                 val readerArticleId = readerState.articleId
                 val readingArticleId =
                     viewModel.readingUiState.collectAsStateValue().articleWithFeed?.article?.id
+                val initialArticleLoaded =
+                    initialArticleId != null &&
+                        contentKey?.articleId == initialArticleId &&
+                        readerArticleId == initialArticleId &&
+                        readingArticleId == initialArticleId &&
+                        readerState.content !is ReaderState.Loading
                 val initialArticlePending =
                     initialArticleId != null && contentKey?.articleId != initialArticleId
                 val articleToLoad =
@@ -246,19 +256,16 @@ fun ArticleListReaderPage(
                     }
                 }
 
+                LaunchedEffect(initialArticleLoaded) {
+                    if (initialArticleLoaded) initialArticleReady = true
+                }
+
                 CompositionLocalProvider(LocalTextContentWidth provides animatedContentWidth) {
                     BackHandler(enabled = forceCloseOnBack) {
                         onBack()
                     }
 
-                    val isExpectedArticle =
-                        initialArticleId == null ||
-                            contentKey?.articleId == initialArticleId &&
-                            readerArticleId == initialArticleId &&
-                            readingArticleId == initialArticleId &&
-                            readerState.content !is ReaderState.Loading
-
-                    if (isExpectedArticle) {
+                    if (initialArticleReady) {
                         ReadingPage(
                             viewModel = viewModel,
                             navigationAction = navigationAction,
