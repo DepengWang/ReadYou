@@ -656,7 +656,11 @@ private fun PulseFeedRow(
             }
             Spacer(modifier = Modifier.width(16.dp))
         }
-        Spacer(modifier = Modifier.height(4.dp))
+        Spacer(
+            modifier = Modifier
+                .height(4.dp)
+                .background(headerBackground),
+        )
 
         if (feed.articles.isEmpty()) {
             Text(
