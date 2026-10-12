@@ -225,7 +225,9 @@ fun ArticleListReaderPage(
                         readingArticleId == initialArticleId &&
                         readerState.content !is ReaderState.Loading
                 val initialArticlePending =
-                    initialArticleId != null && contentKey?.articleId != initialArticleId
+                    !initialArticleReady &&
+                        initialArticleId != null &&
+                        contentKey?.articleId != initialArticleId
                 val articleToLoad =
                     if (initialArticlePending) {
                         initialArticleId
