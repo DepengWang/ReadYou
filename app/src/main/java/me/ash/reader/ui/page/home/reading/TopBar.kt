@@ -52,8 +52,8 @@ import me.ash.reader.ui.component.base.FeedbackIconButton
 import me.ash.reader.ui.page.adaptive.NavigationAction
 
 private val sizeSpec = spring<IntSize>(stiffness = 700f)
-private val readerDarkCanvasColor = Color(0xFF202426)
-private val readerDarkScrolledBarColor = Color(0xFF2C3032)
+private val readerDarkCanvasColor = Color.Black
+private val readerDarkScrolledBarColor = Color(0xFF121212)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

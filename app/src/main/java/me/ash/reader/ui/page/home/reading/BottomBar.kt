@@ -48,7 +48,7 @@ import me.ash.reader.ui.component.base.CanBeDisabledIconButton
 import me.ash.reader.ui.component.webview.BoldCharactersIcon
 
 private val sizeSpec = spring<IntSize>(stiffness = 700f)
-private val readerDarkCanvasColor = Color(0xFF202426)
+private val readerDarkCanvasColor = Color.Black
 
 @Composable
 fun BottomBar(

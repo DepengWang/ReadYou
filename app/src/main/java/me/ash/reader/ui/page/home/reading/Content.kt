@@ -64,7 +64,7 @@ fun Content(
     val renderer = LocalReadingRenderer.current
 
     val articlePageBackgroundColor = if (LocalDarkTheme.current.isDarkTheme()) {
-        Color(0xFF484848)
+        Color(0xFF161616)
     } else {
         Color.White
     }

@@ -71,7 +71,7 @@ fun ReadingPage(
     onNavigateToStylePage: () -> Unit,
 ) {
     val readerCanvasColor = if (LocalDarkTheme.current.isDarkTheme()) {
-        Color(0xFF2B2B2B)
+        Color.Black
     } else {
         Color.White
     }

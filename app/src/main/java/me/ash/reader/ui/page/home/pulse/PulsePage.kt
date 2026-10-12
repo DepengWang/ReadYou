@@ -113,7 +113,7 @@ import androidx.compose.runtime.withFrameNanos
 import me.ash.reader.infrastructure.preference.LocalDarkTheme
 
 private val PulseLightBackgroundColor = Color.White
-private val PulseDarkBackgroundColor = Color(0xFF484848)
+private val PulseDarkBackgroundColor = Color.Black
 private val PulseFeedRowHeight = 147.dp
 private val PulseArticleCardSize = 112.dp
 private val PulseRefreshDragThreshold = PulseArticleCardSize
@@ -560,11 +560,11 @@ private fun PulseFeedRow(
 
     val unreadCount = feed.articles.count { it.article.isUnread }
     val hasUnread = unreadCount > 0
-    val rowBackground = if (isDarkTheme) Color(0xFF2B2B2B) else Color(0xFFF2F2F2)
+    val rowBackground = if (isDarkTheme) Color(0xFF161616) else Color(0xFFF2F2F2)
     val headerBackground = if (isDarkTheme) PulseDarkBackgroundColor else Color.White
-    val flagColor = if (isDarkTheme) Color(0xFF333333) else Color(0xFFE0E0E0)
-    val foldColor = if (isDarkTheme) Color(0xFF4A4A4A) else Color(0xFFC8C8C8)
-    val foldDetailColor = if (isDarkTheme) Color(0xFF666666) else Color(0xFF9E9E9E)
+    val flagColor = if (isDarkTheme) Color(0xFF292929) else Color(0xFFE0E0E0)
+    val foldColor = if (isDarkTheme) Color(0xFF3A3A3A) else Color(0xFFC8C8C8)
+    val foldDetailColor = if (isDarkTheme) Color(0xFF555555) else Color(0xFF9E9E9E)
 
     Column(
         modifier = Modifier
