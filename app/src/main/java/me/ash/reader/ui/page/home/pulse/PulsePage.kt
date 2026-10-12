@@ -793,10 +793,7 @@ private fun PulseFeedRow(
                 ) {
                     LazyRow(
                         modifier = Modifier.fillMaxSize(),
-                        contentPadding = PaddingValues(
-                            start = PulseFeedAccentWidth + PulseArticleEdgeSpacing,
-                            end = PulseArticleEdgeSpacing,
-                        ),
+                        contentPadding = PaddingValues(horizontal = PulseArticleEdgeSpacing),
                         horizontalArrangement = Arrangement.spacedBy(PulseArticleCardSpacing),
                         verticalAlignment = Alignment.CenterVertically,
                         state = listState,
