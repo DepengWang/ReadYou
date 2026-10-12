@@ -114,7 +114,7 @@ import me.ash.reader.infrastructure.preference.LocalDarkTheme
 
 private val PulseLightBackgroundColor = Color.White
 private val PulseDarkBackgroundColor = Color.Black
-private val PulseFeedRowHeight = 147.dp
+private val PulseFeedRowHeight = 155.dp
 private val PulseArticleCardSize = 112.dp
 private val PulseRefreshDragThreshold = PulseArticleCardSize
 private val PulseGroupSwipeThreshold = 56.dp
@@ -673,7 +673,7 @@ private fun PulseFeedRow(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(116.dp)
+                    .height(124.dp)
                     .background(headerBackground)
                     .pointerInput(feed.feed.id, dragThreshold) {
                         val touchSlop = viewConfiguration.touchSlop
@@ -773,8 +773,7 @@ private fun PulseFeedRow(
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(116.dp)
-                        .background(headerBackground)
+                        .height(124.dp)
                         .graphicsLayer {
                             translationX = pullOffset + pullBackOffset.value
                         },
@@ -782,6 +781,7 @@ private fun PulseFeedRow(
                     LazyRow(
                         contentPadding = PaddingValues(horizontal = 10.dp),
                         horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        verticalAlignment = Alignment.CenterVertically,
                         state = listState,
                     ) {
                         items(feed.articles, key = { it.article.id }) { article ->
@@ -816,7 +816,6 @@ private fun PulseFeedRow(
                 )
             }
         }
-        Spacer(modifier = Modifier.height(8.dp))
     }
 }
 
