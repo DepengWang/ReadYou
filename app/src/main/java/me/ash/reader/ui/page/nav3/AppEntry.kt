@@ -26,6 +26,7 @@ import androidx.navigation3.runtime.NavKey
 import androidx.navigation3.runtime.rememberSaveableStateHolderNavEntryDecorator
 import androidx.navigation3.ui.LocalNavAnimatedContentScope
 import androidx.navigation3.ui.NavDisplay
+import me.ash.reader.ui.motion.MotionConstants
 import me.ash.reader.ui.motion.materialSharedAxisXIn
 import me.ash.reader.ui.motion.materialSharedAxisXOut
 import me.ash.reader.ui.page.adaptive.ArticleData
@@ -58,6 +59,25 @@ import me.ash.reader.ui.page.settings.troubleshooting.TroubleshootingPage
 import me.ash.reader.ui.page.startup.StartupPage
 
 private const val INITIAL_OFFSET_FACTOR = 0.10f
+
+private fun pulseReaderTransition(isPopping: Boolean) =
+    if (isPopping) {
+        materialSharedAxisXIn(
+            initialOffsetX = { -(it * MotionConstants.PulseReaderOffsetFactor).toInt() },
+            durationMillis = MotionConstants.PulseReaderMotionDuration,
+        ) togetherWith materialSharedAxisXOut(
+            targetOffsetX = { (it * MotionConstants.PulseReaderOffsetFactor).toInt() },
+            durationMillis = MotionConstants.PulseReaderMotionDuration,
+        )
+    } else {
+        materialSharedAxisXIn(
+            initialOffsetX = { (it * MotionConstants.PulseReaderOffsetFactor).toInt() },
+            durationMillis = MotionConstants.PulseReaderMotionDuration,
+        ) togetherWith materialSharedAxisXOut(
+            targetOffsetX = { -(it * MotionConstants.PulseReaderOffsetFactor).toInt() },
+            durationMillis = MotionConstants.PulseReaderMotionDuration,
+        )
+    }
 
 @OptIn(
     ExperimentalSharedTransitionApi::class,
@@ -102,24 +122,39 @@ fun AppEntry(backStack: NavBackStack<NavKey>) {
                     rememberViewModelStoreNavEntryDecorator(),
                 ),
             transitionSpec = {
-                materialSharedAxisXIn(
-                    initialOffsetX = { (it * INITIAL_OFFSET_FACTOR).toInt() }
-                ) togetherWith
-                    materialSharedAxisXOut(
-                        targetOffsetX = { -(it * INITIAL_OFFSET_FACTOR).toInt() }
-                    )
+                val readerRoute = targetState.key as? Route.Reading
+                if (initialState.key == Route.Pulse && readerRoute?.openedFromPulse == true) {
+                    pulseReaderTransition(isPopping = false)
+                } else {
+                    materialSharedAxisXIn(
+                        initialOffsetX = { (it * INITIAL_OFFSET_FACTOR).toInt() }
+                    ) togetherWith
+                        materialSharedAxisXOut(
+                            targetOffsetX = { -(it * INITIAL_OFFSET_FACTOR).toInt() }
+                        )
+                }
             },
             popTransitionSpec = {
-                materialSharedAxisXIn(
-                    initialOffsetX = { -(it * INITIAL_OFFSET_FACTOR).toInt() }
-                ) togetherWith
-                    materialSharedAxisXOut(targetOffsetX = { (it * INITIAL_OFFSET_FACTOR).toInt() })
+                val readerRoute = initialState.key as? Route.Reading
+                if (readerRoute?.openedFromPulse == true && targetState.key == Route.Pulse) {
+                    pulseReaderTransition(isPopping = true)
+                } else {
+                    materialSharedAxisXIn(
+                        initialOffsetX = { -(it * INITIAL_OFFSET_FACTOR).toInt() }
+                    ) togetherWith
+                        materialSharedAxisXOut(targetOffsetX = { (it * INITIAL_OFFSET_FACTOR).toInt() })
+                }
             },
             predictivePopTransitionSpec = {
-                materialSharedAxisXIn(
-                    initialOffsetX = { -(it * INITIAL_OFFSET_FACTOR).toInt() }
-                ) togetherWith
-                    materialSharedAxisXOut(targetOffsetX = { (it * INITIAL_OFFSET_FACTOR).toInt() })
+                val readerRoute = initialState.key as? Route.Reading
+                if (readerRoute?.openedFromPulse == true && targetState.key == Route.Pulse) {
+                    pulseReaderTransition(isPopping = true)
+                } else {
+                    materialSharedAxisXIn(
+                        initialOffsetX = { -(it * INITIAL_OFFSET_FACTOR).toInt() }
+                    ) togetherWith
+                        materialSharedAxisXOut(targetOffsetX = { (it * INITIAL_OFFSET_FACTOR).toInt() })
+                }
             },
             onBack = {
                 val top = backStack.lastOrNull()

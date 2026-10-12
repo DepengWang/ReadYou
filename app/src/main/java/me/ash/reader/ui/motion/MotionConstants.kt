@@ -24,5 +24,7 @@ public object MotionConstants {
     public const val DefaultMotionDuration: Int = 300
     public const val DefaultFadeInDuration: Int = 150
     public const val DefaultFadeOutDuration: Int = 75
+    public const val PulseReaderMotionDuration: Int = 360
+    public const val PulseReaderOffsetFactor: Float = 0.05f
     public val DefaultSlideDistance: Dp = 30.dp
 }

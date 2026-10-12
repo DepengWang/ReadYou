@@ -42,6 +42,7 @@ import kotlinx.parcelize.Parcelize
 import me.ash.reader.ui.component.reader.ExpandedContentWidth
 import me.ash.reader.ui.component.reader.LocalTextContentWidth
 import me.ash.reader.ui.component.reader.MediumContentWidth
+import me.ash.reader.ui.motion.MotionConstants
 import me.ash.reader.ui.page.home.flow.FlowPage
 import me.ash.reader.ui.page.home.reading.ReadingPage
 import me.ash.reader.ui.ext.collectAsStateValue
@@ -72,6 +73,16 @@ fun ArticleListReaderPage(
 ) {
 
     val scope = rememberCoroutineScope()
+    val paneMotionDuration = if (forceCloseOnBack) {
+        MotionConstants.PulseReaderMotionDuration
+    } else {
+        MotionConstants.DefaultMotionDuration
+    }
+    val paneMotionOffset = if (forceCloseOnBack) {
+        MotionConstants.PulseReaderOffsetFactor
+    } else {
+        0.10f
+    }
 
     BackHandler(enabled = forceCloseOnBack) {
         onBack()
@@ -146,8 +157,16 @@ fun ArticleListReaderPage(
                 }
             }
             AnimatedPane(
-                enterTransition = motionDataProvider.calculateEnterTransition(paneRole),
-                exitTransition = motionDataProvider.calculateExitTransition(paneRole),
+                enterTransition = motionDataProvider.calculateEnterTransition(
+                    paneRole,
+                    durationMillis = paneMotionDuration,
+                    offsetFactor = paneMotionOffset,
+                ),
+                exitTransition = motionDataProvider.calculateExitTransition(
+                    paneRole,
+                    durationMillis = paneMotionDuration,
+                    offsetFactor = paneMotionOffset,
+                ),
             ) {
                 CompositionLocalProvider(
                     LocalBackgroundTextMeasurementExecutor provides
@@ -178,8 +197,16 @@ fun ArticleListReaderPage(
         },
         detailPane = {
             AnimatedPane(
-                enterTransition = motionDataProvider.calculateEnterTransition(paneRole),
-                exitTransition = motionDataProvider.calculateExitTransition(paneRole),
+                enterTransition = motionDataProvider.calculateEnterTransition(
+                    paneRole,
+                    durationMillis = paneMotionDuration,
+                    offsetFactor = paneMotionOffset,
+                ),
+                exitTransition = motionDataProvider.calculateExitTransition(
+                    paneRole,
+                    durationMillis = paneMotionDuration,
+                    offsetFactor = paneMotionOffset,
+                ),
             ) {
                 val contentKey = navigator.currentDestination?.contentKey
                 val readerArticleId = viewModel.readerStateStateFlow.collectAsStateValue().articleId
